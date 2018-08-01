@@ -1,6 +1,9 @@
 print("lol")
 
-print("Ciao Antimo")
+<<<<<<< HEAD
+print("Hello Github")
 
-print("Ciao Fabrizio")
-print("Ciao da Antonio")
+print("mia modifica")
+=======
+print("Ciao Antimo")
+>>>>>>> origin/master
