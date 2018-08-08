@@ -109,6 +109,13 @@ def sigmoid_(x):
     return sigmoid(x) * (1 - sigmoid(x))
 
 
+def sum_square(t,y):
+    err=0
+    for i in range(y.size):
+        err+=(y[i]-t[i])**2
+        err/=2
+    return err
+
 # Test della rete neurale
 np.random.seed(1)
 functions = {}
