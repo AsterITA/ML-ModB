@@ -41,8 +41,8 @@ class Net:
             z[i+1]=np.dot(a[i], self.W[i])+self.B[i]
             a[i+1]=self.activations[i](z[i+1])
 
-        # Output of the neural network
-        return a[self.n_layers]
+        # Output
+        return z, a
 
     # learning online
     def train_net_online(self, training_set, validation_set, max_epoch, eta, error_function, alpha):
