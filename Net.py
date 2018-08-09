@@ -1,17 +1,17 @@
+import copy as cp
+
 import numpy as np
 from sympy import sympify
 from sympy import var, diff
 from sympy.utilities.lambdify import lambdify
-import copy as cp
-
-# mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
+from tensorflow.examples.tutorials.mnist import input_data
 
 
 class Net:
     def __init__(self, dimensions, activations):
 
         self.n_layers = len(dimensions)
-        self.activations = {}
+        self.activations = activations
         self.primes = {}
 
         self.W = {}
@@ -24,15 +24,14 @@ class Net:
             # This is called Xavier initialization and helps prevent neuron activations from being too large or too
             # small. <--- decidiamo se lasciarlo o no
             self.B[i + 1] = np.zeros(dimensions[i + 1])  # Bias
-            self.activations[i + 1] = activations[i]
-            if activations[i] == sigmoid:
+            if self.activations[i + 1] == sigmoid:
                 self.primes[i + 1] = sigmoid_
             else:
-                self.primes[i + 1] = lambdify(x, diff(activations[i](x), x))
+                self.primes[i + 1] = lambdify(x, diff(self.activations[i + 1](x), x))
 
                 # Le righe successive sono una prova se le funzioni da input le prende bene
-                print(self.activations[i + 1](3))
-                print(self.primes[i + 1](3))
+                # print(self.activations[i + 1](3))
+                # print(self.primes[i + 1](3))
 
     # learning online
     def train_net_online(self, training_set, validation_set, max_epoch, eta, error_function, alpha):
@@ -41,7 +40,8 @@ class Net:
             np.random.shuffle(training_set)
             for n in range(len(training_set)):
                 act_and_out = self.forward_propagation_with_output_hidden(training_set[n]['input'])
-                deltas = self.back_propagation(training_set[n]['label'], act_and_out['outputs'], act_and_out['activations'])
+                deltas = self.back_propagation(training_set[n]['label'], act_and_out['outputs'],
+                                               act_and_out['activations'])
                 derivatives = self.calc_derivatives(training_set[n]['input'], act_and_out['outputs'], deltas)
                 self.update_weights(derivatives, eta)
             # Calcolo dell'errore sul training set
@@ -77,7 +77,8 @@ class Net:
     def back_propagation(self, labels, outputs, node_act):
         # Calcolo delta
         deltas = np.ndarray(self.n_layers, dtype=np.ndarray)
-        deltas[self.n_layers - 1] = self.primes[self.n_layers - 1](node_act[self.n_layers - 1]) * (outputs[self.n_layers - 1] - labels)
+        deltas[self.n_layers - 1] = self.primes[self.n_layers - 1](node_act[self.n_layers - 1]) * (
+                outputs[self.n_layers - 1] - labels)
         for l in range(self.n_layers - 2, -1, -1):
             deltas[l] = np.dot(deltas[l + 1], self.W[l + 1])
             deltas[l] = self.primes[l](node_act[l]) * deltas[l]
@@ -101,6 +102,7 @@ class Net:
             self.W[l] = self.W[l] - eta * derivatives['weights'][l]
             self.B[l] = self.B[l] - eta * derivatives['bias'][l]
 
+
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))  # activation function
 
@@ -109,24 +111,27 @@ def sigmoid_(x):
     return sigmoid(x) * (1 - sigmoid(x))
 
 
-def sum_square(t,y):
-    err=0
+def sum_square(t, y):
+    err = 0
     for i in range(y.size):
-        err+=(y[i]-t[i])**2
-        err/=2
+        err += (y[i] - t[i]) ** 2
+        err /= 2
     return err
 
+
 # Test della rete neurale
-np.random.seed(1)
+mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
+# Data= np.concatenate((mnist.train.images, mnist.validation.images, mnist.test.images))
+# Labels= np.concatenate((mnist.train.labels, mnist.validation.labels, mnist.test.labels))
 functions = {}
-functions[0] = sigmoid
+functions[1] = sigmoid
 
 x = var('x')  # the possible variable names must be known beforehand...
 user_input = 'x **2'  # Simulo l'input dell'utente
 expr = sympify(user_input)
 f = lambdify(x, expr)  # Con questo si trasforma l'input in una funzione
 
-functions[1] = f
+functions[2] = f
 
 # f_ = lambdify(x, diff(f(x), x))     # Con questo si ottiene la derivata della funzione in input
 
