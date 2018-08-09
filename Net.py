@@ -1,11 +1,9 @@
 import copy as cp
-
 import numpy as np
 from sympy import sympify
 from sympy import var, diff
 from sympy.utilities.lambdify import lambdify
 from tensorflow.examples.tutorials.mnist import input_data
-
 
 class Net:
     def __init__(self, dimensions, activations):
@@ -29,9 +27,22 @@ class Net:
             else:
                 self.primes[i + 1] = lambdify(x, diff(self.activations[i + 1](x), x))
 
-                # Le righe successive sono una prova se le funzioni da input le prende bene
-                # print(self.activations[i + 1](3))
-                # print(self.primes[i + 1](3))
+            # Le righe successive sono una prova se le funzioni da input le prende bene
+            #print(self.activations[i + 1](3))
+            #print(self.primes[i + 1](3))
+
+    #Forward propagation
+    def feed_forward(self, x):
+        z={}
+        # The first layer has no ‘real’ activations, so we consider the inputs x as the activations of the previous layer.
+        a={1: x}
+
+        for i in range(1, self.n_layers):
+            z[i+1]=np.dot(a[i], self.W[i])+self.B[i]
+            a[i+1]=self.activations[i](z[i+1])
+
+        # Output of the neural network
+        return a[self.n_layers]
 
     # learning online
     def train_net_online(self, training_set, validation_set, max_epoch, eta, error_function, alpha):
@@ -102,14 +113,11 @@ class Net:
             self.W[l] = self.W[l] - eta * derivatives['weights'][l]
             self.B[l] = self.B[l] - eta * derivatives['bias'][l]
 
-
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))  # activation function
 
-
 def sigmoid_(x):
     return sigmoid(x) * (1 - sigmoid(x))
-
 
 def sum_square(t, y):
     err = 0
@@ -117,7 +125,6 @@ def sum_square(t, y):
         err += (y[i] - t[i]) ** 2
         err /= 2
     return err
-
 
 # Test della rete neurale
 mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
@@ -134,4 +141,4 @@ f = lambdify(x, expr)  # Con questo si trasforma l'input in una funzione
 
 functions[2] = f
 
-NN = Net([2, 1, 2], functions)
+NN=Net([2, 3, 1], functions)
