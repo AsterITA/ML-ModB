@@ -123,6 +123,7 @@ def sum_square(t, y):
 mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
 # Data= np.concatenate((mnist.train.images, mnist.validation.images, mnist.test.images))
 # Labels= np.concatenate((mnist.train.labels, mnist.validation.labels, mnist.test.labels))
+
 functions = {}
 functions[1] = sigmoid
 
@@ -132,7 +133,5 @@ expr = sympify(user_input)
 f = lambdify(x, expr)  # Con questo si trasforma l'input in una funzione
 
 functions[2] = f
-
-# f_ = lambdify(x, diff(f(x), x))     # Con questo si ottiene la derivata della funzione in input
 
 NN = Net([2, 1, 2], functions)
