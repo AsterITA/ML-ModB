@@ -133,24 +133,25 @@ class Net:
 
     # https://github.com/encog/encog-java-core/blob/master/src/main/java/org/encog/neural/networks/training/propagation/resilient/ResilientPropagation.java#L419
 
-    def RPROP(self, derivatives_tot, lastDerivatives, updateValues, i):
-        change = np.sign(derivatives_tot[i] * lastDerivatives[i])
+    def RPROP(self, derivatives, lastDerivatives, lastDelta, i):
+        change = np.sign(derivatives[i] * lastDerivatives[i])
         if change > 0:
-            delta = min(updateValues[i] * ETA_P, MAX_STEP)
-            weightChange = -np.sign(derivatives_tot[i]) * delta
-            updateValues[i] = delta
-            lastDerivatives[i] = derivatives_tot[i]
+            delta = min(lastDelta[i] * ETA_P, MAX_STEP)
+            deltaW = -np.sign(derivatives[i]) * delta
+            lastDelta[i] = delta
+            lastDerivatives[i] = derivatives[i]
         elif change < 0:
-            lastWeightChange = updateValues[i]
-            delta = max(updateValues[i] * ETA_M, MIN_STEP)
+            deltaW = 0
+            lastWeightChange = lastDelta[i]
+            delta = max(lastDelta[i] * ETA_M, MIN_STEP)
             if (actualError > lastError):
-                weightChange = -updateValues[i]
-            updateValues[i] = delta
-            lastDerivatives[i] = derivatives_tot[i] = 0
+                deltaW = -lastDelta[i]
+            lastDelta[i] = delta
+            lastDerivatives[i] = derivatives[i] = 0
         else:
-            weightChange = -np.sign(derivatives_tot[i]) * updateValues[i]
-            lastDerivatives[i] = derivatives_tot[i]
-        return weightChange
+            deltaW = -np.sign(derivatives[i]) * lastDelta[i]
+            lastDerivatives[i] = derivatives[i]
+        return deltaW
 
     def update_weights(self, derivatives, eta):
         # Aggiornamento dei pesi Metodo discesa del gradiente
