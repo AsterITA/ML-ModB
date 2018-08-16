@@ -146,7 +146,6 @@ class Net:
         derivatives = {'weights': derivate_W, 'bias': derivate_B}
         return derivatives
 
-
     def RPROP(self, derivatives, lastDerivatives, lastDelta, i, actualError, lastError):
         change = np.sign(derivatives[i] * lastDerivatives[i])
         if change > 0:
@@ -245,6 +244,29 @@ def getUserFunction(n_variables):
     return func
 
 
+def getActivation(layer):
+    print("Che funzione di attivazione vuoi utilizzare nello strato {}?\n"
+          "1) Sigmoide\n"
+          "2) Definita da input\n".format(layer))
+    choice = getUserAmount(1, 2)
+    if choice == 1:
+        f = sigmoid
+    else:
+        f = getUserFunction(1)
+    return f
+
+
+def getErrorFunc():
+    print("Che funzione di errore vuoi utilizzare?\n"
+          "1) Somma dei quadrati\n"
+          "2) Definita da input\n")
+    choice = getUserAmount(1, 2)
+    if choice == 1:
+        f = sum_square
+    else:
+        f = getUserFunction(2)
+    return f
+
 mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
 #   Mi prendo le prime 200 immagini per il training e le prime 100 per il validation e per il test
 train_images = mnist.train.images[:200]
@@ -276,32 +298,9 @@ while True:
         for l in range(1, n_layers + 1):
             print("Inserisci il numero di nodi al livello {}".format(l))
             dimensions[l] = getUserAmount(1, 900)
-            print("Che funzione di attivazione vuoi utilizzare in questo strato?\n"
-                  "1) Sigmoide\n"
-                  "2) Definita da input\n")
-            choice = getUserAmount(1, 2)
-            if choice == 1:
-                functions[l] = sigmoid
-            else:
-                functions[l] = getUserFunction(1)
-        print("Che funzione di attivazione vuoi utilizzare nello strato di output?\n"
-              "1) Sigmoide\n"
-              "2) Definita da input\n")
-        choice = getUserAmount(1, 2)
-        if choice == 1:
-            functions[n_layers + 1] = sigmoid
-        else:
-            functions[n_layers + 1] = getUserFunction(1)
-        print("Che funzione di errore vuoi utilizzare?\n"
-              "1) Somma dei quadrati\n"
-              "2) Definita da input\n")
-        choice = getUserAmount(1, 2)
-        if choice == 1:
-            error_function = sum_square
-        else:
-            error_function = getUserFunction(2)
-
-        NN = Net(dimensions, functions, error_function)
+            functions[l] = getActivation(l)
+        functions[n_layers + 1] = getActivation(n_layers + 1)
+        NN = Net(dimensions, functions, getErrorFunc())
         print("Vuoi utilizzare il learning batch o online?\n"
               "1) Batch\n"
               "2) Online\n")
@@ -325,31 +324,9 @@ while True:
         functions = {}
         print("inserisci il numero di nodi nello strato nascosto")
         dimensions[1] = getUserAmount(1, 900)
-        print("Che funzione di attivazione vuoi utilizzare in questo strato?\n"
-              "1) Sigmoide\n"
-              "2) Definita da input\n")
-        choice = getUserAmount(1, 2)
-        if choice == 1:
-            functions[1] = sigmoid
-        else:
-            functions[1] = getUserFunction(1)
-        print("Che funzione di attivazione vuoi utilizzare nello strato di output?\n"
-              "1) Sigmoide\n"
-              "2) Definita da input\n")
-        choice = getUserAmount(1, 2)
-        if choice == 1:
-            functions[2] = sigmoid
-        else:
-            functions[2] = getUserFunction(1)
-        print("Che funzione di errore vuoi utilizzare?\n"
-              "1) Somma dei quadrati\n"
-              "2) Definita da input\n")
-        choice = getUserAmount(1, 2)
-        if choice == 1:
-            error_function = sum_square
-        else:
-            error_function = getUserFunction(2)
-        NN_PCA = Net(dimensions, functions, error_function)
+        functions[1] = getActivation(1)
+        functions[2] = getActivation(2)
+        NN_PCA = Net(dimensions, functions, getErrorFunc())
         NN_PCA.train_net(train_PCA, validation, 50, 0.5, 10)
 
         # Test Rete Autoassociativa
