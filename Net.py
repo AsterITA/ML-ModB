@@ -48,6 +48,10 @@ class Net:
         # Output
         return z, a
 
+    def predict(self, x):
+        _, a = self.feed_forward(x)
+        return a[self.n_layers]
+
     # learning online
     def train_net(self, training_set, validation_set, max_epoch, eta, alpha, online_flag=False):
         best_error_validation = float("inf")  # float("inf") è il valore float dell'inifinito, quindi garantisce
@@ -60,21 +64,21 @@ class Net:
                 # permutazione del training set
                 np.random.shuffle(training_set)
             for n in range(len(training_set)):
-                act, out = self.feed_forward(training_set['input'][n])
-                derivatives = self.back_propagation(training_set['input'][n], training_set['label'][n], out, act)
+                act, out = self.feed_forward(training_set[n]['input'])
+                derivatives = self.back_propagation(training_set[n]['input'], training_set[n]['label'], out, act)
                 if online_flag:
                     self.update_weights(derivatives, eta)
                 elif n == 0:
                     derivatives_tot['weights'] = derivatives['weights']
                     derivatives_tot['bias'] = derivatives['bias']
-                    error_training[t] = self.error_function(out[self.n_layers], training_set['label'][n])
+                    error_training[t] = self.error_function(out[self.n_layers], training_set[n]['label'])
                 else:
                     # last_error_training = error_training
                     derivatives_tot['weights'] += derivatives['weights']
                     derivatives_tot['bias'] += derivatives['bias']
-                    error_training[t] += self.error_function(out[self.n_layers], training_set['label'][n])
-                if n % 1000 == 0:  # Queste due righe le ho messe per capire
-                    print("t", t, "n ", n)  # in fase di run a che punto sta
+                    error_training[t] += self.error_function(out[self.n_layers], training_set[n]['label'])
+            #    if n % 1000 == 0:  # Queste due righe le ho messe per capire
+            #        print("t", t, "n ", n)  # in fase di run a che punto sta
             if not online_flag:
                 if not lastDerivatives:
                     self.update_weights(derivatives_tot, eta)
@@ -103,16 +107,16 @@ class Net:
             if online_flag:
                 # Calcolo dell'errore sul training set
                 for n in range(len(training_set)):
-                    _, out = self.feed_forward(training_set['input'][n])
-                    error_training[t] += self.error_function(out[self.n_layers], training_set['label'][n])
-                    if n % 1000 == 0:
-                        print("t", t, "err train ", n)
+                    _, out = self.feed_forward(training_set[n]['input'])
+                    error_training[t] += self.error_function(out[self.n_layers], training_set[n]['label'])
+            #       if n % 1000 == 0:
+            #           print("t", t, "err train ", n)
             # Calcolo dell'errore sul validation
             for n in range(len(validation_set)):
-                _, out = self.feed_forward(validation_set['input'][n])
-                error_validation += self.error_function(out[self.n_layers], validation_set['label'][n])
-                if n % 1000 == 0:
-                    print("t ", t, "err_valid ", n)
+                _, out = self.feed_forward(validation_set[n]['input'])
+                error_validation += self.error_function(out[self.n_layers], validation_set[n]['label'])
+            #    if n % 1000 == 0:
+            #       print("t ", t, "err_valid ", n)
             # La rete di questo passo è migliore?
             if best_error_validation > error_validation[t]:
                 best_error_validation = error_validation[t]
@@ -157,7 +161,7 @@ class Net:
             deltaW = 0
             lastWeightChange = lastDelta[i]
             delta = max(lastDelta[i] * ETA_M, MIN_STEP)
-            if (actualError > lastError):
+            if actualError > lastError:
                 deltaW = -lastDelta[i]
             lastDelta[i] = delta
             lastDerivatives[i] = derivatives[i] = 0
@@ -267,18 +271,20 @@ def getErrorFunc():
         f = getUserFunction(2)
     return f
 
-mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
-#   Mi prendo le prime 200 immagini per il training e le prime 100 per il validation e per il test
-train_images = mnist.train.images[:200]
-train_labels = mnist.train.labels[:200]
-validation_images = mnist.validation.images[:100]
-validation_labels = mnist.validation.labels[:100]
-test_images = mnist.test.images[:100]
-test_labels = mnist.test.labels[:100]
 
-training = {'input': train_images, 'label': train_labels}
-validation = {'input': validation_images, 'label': validation_labels}
-test = {'input': test_images, 'label': test_labels}
+mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
+training_set = []
+validation_set = []
+test_set = []
+#   Mi prendo le prime 200 immagini per il training e le prime 100 per il validation e per il test
+for i in range(200):
+    elem = {'input': mnist.train.images[i], 'label': mnist.train.labels[i]}
+    training_set.append(elem)
+    if i < 100:
+        elem = {'input': mnist.validation.images[i], 'label': mnist.validation.labels[i]}
+        validation_set.append(elem)
+        elem = {'input': mnist.test.images[i], 'label': mnist.test.labels[i]}
+        test_set.append(elem)
 
 print("Scegli cosa vuoi fare dalla seguente lista:")
 while True:
@@ -292,7 +298,7 @@ while True:
         print("Quanti strati interni vuoi all'interno della tua rete?")
         n_layers = getUserAmount(1, 10)
         dimensions = np.zeros(n_layers + 2)
-        dimensions[0] = len(train_images[0])
+        dimensions[0] = len(training_set[0]['input'])
         dimensions[n_layers + 1] = 10
         functions = {}
         for l in range(1, n_layers + 1):
@@ -309,25 +315,26 @@ while True:
             method = False
         else:
             method = True
-        NN.train_net(test, validation, 50, 0.5, 10, method)
+        NN.train_net(training_set, validation_set, 50, 0.5, 10, method)
 
         print("\n" * 10)
         continue
     elif choice == 2:
         # TEST PCA
         soglia_pca = 0.7
-        new_dataset, matrix_w = PCA(training['input'], soglia_pca)
-        train_PCA = {'input': new_dataset, 'label': train_labels}
+        new_dataset, matrix_w = PCA(mnist.train.images[:200], soglia_pca)
+        training_set_PCA = []
+        for i in range(200):
+            elem = {'input': new_dataset[i], 'label': mnist.train.labels[i]}
+            training_set_PCA.append(elem)
         dimensions = np.zeros(3)
-        dimensions[0] = len(new_dataset[0])
-        dimensions[2] = 10
-        functions = {}
+        dimensions[0] = len(training_set[0]['input'])
         print("inserisci il numero di nodi nello strato nascosto")
         dimensions[1] = getUserAmount(1, 900)
-        functions[1] = getActivation(1)
-        functions[2] = getActivation(2)
+        dimensions[2] = 10
+        functions = {1: getActivation(1), 2: getActivation(2)}
         NN_PCA = Net(dimensions, functions, getErrorFunc())
-        NN_PCA.train_net(train_PCA, validation, 50, 0.5, 10)
+        NN_PCA.train_net(training_set_PCA, validation_set, 50, 0.5, 10)
 
         # Test Rete Autoassociativa
 
