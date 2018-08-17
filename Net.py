@@ -206,10 +206,8 @@ def PCA(data_set, soglia):
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))  # activation function
 
-
 def sigmoid_(x):
     return sigmoid(x) * (1 - sigmoid(x))
-
 
 def sum_square(t, y):
     # err = 0
@@ -237,14 +235,39 @@ def getUserAmount(min, max):
 
 
 def getUserFunction(n_variables):
+    global warning
+    if warning:
+        print('\033[93m' + "ATTENZIONE: LA DEFINIZIONE DI UNA FUNZIONE NON VALIDA COMPROMETTERA' L'UTILIZZO DELLA RETE,"
+                           " PERTANTO NON SI GARANTISCE IL CORRETTO FUNZIONAMENTO DELLA STESSA" + '\033[0m')
+        warning = 0
     if n_variables == 1:
         var('x')
-        user_input = input("Definisci una funzione matematica con una variabile x\n")
+        while True:
+            user_input = input("Definisci una funzione matematica con una variabile x\n")
+            if "x" in user_input:
+                break
+            else:
+                print("All'interno della funzione ci dev'essere la variabile x, riprova")
         func = lambdify(x, sympify(user_input))
     elif n_variables == 2:
         var('x y')
-        user_input = input("Definisci una funzione matematica con due variabili x e y\n")
+        while True:
+            user_input = input("Definisci una funzione matematica con due variabili x e y\n")
+            if "x" in user_input:
+                if "y" in user_input:
+                    break
+                else:
+                    print(
+                        "All'interno della funzione non c'è la variabile y, ricorda che devi inserire sia x che y, riprova")
+            else:
+                print(
+                    "All'interno della funzione non c'è la variabile x, ricorda che devi inserire sia x che y, riprova")
         func = lambdify((x, y), sympify(user_input))
+    print("Test funzione:")
+    if n_variables == 1:
+        print("La tua funzione con input 2 da come risultato: {}".format(func(2)))
+    else:
+        print("La tua funzione con input x=2 e y=2 da come risultato: {}".format(func(2, 2)))
     return func
 
 
@@ -276,6 +299,7 @@ mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
 training_set = []
 validation_set = []
 test_set = []
+warning = True
 #   Mi prendo le prime 200 immagini per il training e le prime 100 per il validation e per il test
 for i in range(200):
     elem = {'input': mnist.train.images[i], 'label': mnist.train.labels[i]}
@@ -308,14 +332,9 @@ while True:
         functions[n_layers + 1] = getActivation(n_layers + 1)
         NN = Net(dimensions, functions, getErrorFunc())
         print("Vuoi utilizzare il learning batch o online?\n"
-              "1) Batch\n"
-              "2) Online\n")
-        method = getUserAmount(1, 2)
-        if method == 1:
-            method = False
-        else:
-            method = True
-        NN.train_net(training_set, validation_set, 50, 0.5, 10, method)
+              "0) Batch\n"
+              "1) Online\n")
+        NN.train_net(training_set, validation_set, 50, 0.5, 10, getUserAmount(0, 1))
 
         print("\n" * 10)
         continue
@@ -324,17 +343,24 @@ while True:
         soglia_pca = 0.7
         new_dataset, matrix_w = PCA(mnist.train.images[:200], soglia_pca)
         training_set_PCA = []
+        validation_set_PCA = []
+        test_set_PCA = []
         for i in range(200):
             elem = {'input': new_dataset[i], 'label': mnist.train.labels[i]}
             training_set_PCA.append(elem)
+            if i < 100:
+                elem = {'input': np.dot(validation_set[i]['input'], matrix_w), 'label': mnist.validation.labels[i]}
+                validation_set.append(elem)
+                elem = {'input': np.dot(test_set[i]['input'], matrix_w), 'label': mnist.test.labels[i]}
+                test_set.append(elem)
         dimensions = np.zeros(3)
-        dimensions[0] = len(training_set[0]['input'])
+        dimensions[0] = len(training_set_PCA[0]['input'])
         print("inserisci il numero di nodi nello strato nascosto")
         dimensions[1] = getUserAmount(1, 900)
         dimensions[2] = 10
         functions = {1: getActivation(1), 2: getActivation(2)}
         NN_PCA = Net(dimensions, functions, getErrorFunc())
-        NN_PCA.train_net(training_set_PCA, validation_set, 50, 0.5, 10)
+        NN_PCA.train_net(training_set_PCA, validation_set_PCA, 50, 0.5, 10)
 
         # Test Rete Autoassociativa
 
