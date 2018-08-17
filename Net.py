@@ -179,7 +179,9 @@ class Net:
 
 def PCA(data_set, soglia):
     # calcola il vettore media del dataset
-    cov_mat = np.cov(data_set.T) \
+    #cov_mat = np.cov(data_set.T)
+    mean_vec = np.mean(data_set, axis=0)
+    cov_mat = (data_set - mean_vec).T.dot((data_set - mean_vec))  # / (data_set.shape[0])
         # Calcolo autovalori e autovettori
     eig_vals, eig_vecs = np.linalg.eig(cov_mat)
     print('Eigenvectors ', eig_vecs.shape)
@@ -350,9 +352,9 @@ while True:
             training_set_PCA.append(elem)
             if i < 100:
                 elem = {'input': np.dot(validation_set[i]['input'], matrix_w), 'label': mnist.validation.labels[i]}
-                validation_set.append(elem)
+                validation_set_PCA.append(elem)
                 elem = {'input': np.dot(test_set[i]['input'], matrix_w), 'label': mnist.test.labels[i]}
-                test_set.append(elem)
+                test_set_PCA.append(elem)
         dimensions = np.zeros(3)
         dimensions[0] = len(training_set_PCA[0]['input'])
         print("inserisci il numero di nodi nello strato nascosto")
