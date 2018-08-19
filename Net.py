@@ -187,10 +187,10 @@ class Net:
 
 def PCA(data_set, soglia):
     # calcola il vettore media del dataset
-    #cov_mat = np.cov(data_set.T)
+    # cov_mat = np.cov(data_set.T)
     mean_vec = np.mean(data_set, axis=0)
     cov_mat = (data_set - mean_vec).T.dot((data_set - mean_vec))  # / (data_set.shape[0])
-        # Calcolo autovalori e autovettori
+    # Calcolo autovalori e autovettori
     eig_vals, eig_vecs = np.linalg.eig(cov_mat)
     print('Eigenvectors ', eig_vecs.shape)
     print('Eigenvalues ', eig_vals.shape)
@@ -211,10 +211,6 @@ def PCA(data_set, soglia):
     # creazione matrice di proiezione
     matrix_w = np.hstack(eig_pairs[i][1].reshape(len(data_set[0]), 1) for i in range(new_dim))
     return np.dot(data_set, matrix_w), matrix_w
-
-
-
-
 
 
 mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
