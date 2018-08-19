@@ -34,6 +34,12 @@ class Net:
             self.B[i + 1] = np.zeros(dimensions[i + 1])  # Bias
             if self.activations[i + 1] == nf.sigmoid:
                 self.primes[i + 1] = nf.sigmoid_
+            elif self.activations[i + 1] == nf.ReLU:
+                self.primes[i + 1] = nf.ReLU_
+            elif self.activations[i + 1] == nf.tanh:
+                self.primes[i + 1] = nf.tanh_
+            elif self.activations[i + 1] == nf.linear:
+                self.primes[i + 1] = nf.linear_
             else:
                 self.primes[i + 1] = lambdify(x, diff(self.activations[i + 1](x), x))
 
