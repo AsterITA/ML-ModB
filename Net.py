@@ -46,7 +46,8 @@ class Net:
     # Forward propagation
     def feed_forward(self, x):
         z = {}
-        # The first layer has no ‘real’ activations, so we consider the inputs x as the activations of the previous layer.
+        # The first layer has no ‘real’ activations, so we consider the inputs x as the activations of the previous
+        # layer.
         a = {1: x}
 
         for i in range(1, self.n_layers):
@@ -167,7 +168,6 @@ class Net:
             lastDerivatives[i] = derivatives[i]
         elif change < 0:
             deltaW = 0
-            lastWeightChange = lastDelta[i]
             delta = max(lastDelta[i] * ETA_M, MIN_STEP)
             if actualError > lastError:
                 deltaW = -lastDelta[i]

@@ -37,8 +37,8 @@ def getUserFunction(n_variables):
                 if "y" in user_input:
                     break
                 else:
-                    print(
-                        "All'interno della funzione non c'è la variabile y, ricorda che devi inserire sia x che y, riprova")
+                    print("All'interno della funzione non c'è la variabile y, ricorda che devi inserire sia x che y, "
+                          "riprova")
             else:
                 print(
                     "All'interno della funzione non c'è la variabile x, ricorda che devi inserire sia x che y, riprova")
