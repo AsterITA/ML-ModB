@@ -75,7 +75,7 @@ def getActivation(layer):
 def getErrorFunc():
     print("Che funzione di errore vuoi utilizzare?\n"
           "1) Somma dei quadrati\n"
-          "2) Cross Entropy"
+          "2) Cross Entropy\n"
           "3) Definita da input\n")
     choice = getUserAmount(1, 3)
     if choice == 1:
