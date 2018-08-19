@@ -2,10 +2,12 @@ import copy as cp
 import sys
 
 import numpy as np
-from sympy import sympify
 from sympy import var, diff
 from sympy.utilities.lambdify import lambdify
 from tensorflow.examples.tutorials.mnist import input_data
+
+import netFunctions as nf
+import utils as ut
 
 ETA_P = 1.2
 ETA_M = 0.5
@@ -30,8 +32,8 @@ class Net:
             # The drawn weights are eventually divided by the square root of the current layers dimensions.
             # This is called Xavier initialization and helps prevent neuron activations from being too large or too
             self.B[i + 1] = np.zeros(dimensions[i + 1])  # Bias
-            if self.activations[i + 1] == sigmoid:
-                self.primes[i + 1] = sigmoid_
+            if self.activations[i + 1] == nf.sigmoid:
+                self.primes[i + 1] = nf.sigmoid_
             else:
                 self.primes[i + 1] = lambdify(x, diff(self.activations[i + 1](x), x))
 
@@ -205,103 +207,14 @@ def PCA(data_set, soglia):
     return np.dot(data_set, matrix_w), matrix_w
 
 
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))  # activation function
-
-def sigmoid_(x):
-    return sigmoid(x) * (1 - sigmoid(x))
-
-def sum_square(t, y):
-    # err = 0
-    # for i in range(y.size):
-    #     err += (y[i] - t[i]) ** 2
-    #     err /= 2
-    err = (y - t) ** 2
-    err = sum(err)
-    err /= 2
-    return err
 
 
-def getUserAmount(min, max):
-    while True:
-        amount = input("Inserisci un numero compreso tra {} e {}\n".format(min, max))
-        try:
-            value = int(amount)
-            if min <= value <= max:
-                break
-            else:
-                print("Il numero dev'essere compreso tra {} e {}, riprova\n".format(min, max))
-        except ValueError:
-            print("Devi inserire un numero, riprova\n")
-    return value
-
-
-def getUserFunction(n_variables):
-    global warning
-    if warning:
-        print('\033[93m' + "ATTENZIONE: LA DEFINIZIONE DI UNA FUNZIONE NON VALIDA COMPROMETTERA' L'UTILIZZO DELLA RETE,"
-                           " PERTANTO NON SI GARANTISCE IL CORRETTO FUNZIONAMENTO DELLA STESSA" + '\033[0m')
-        warning = 0
-    if n_variables == 1:
-        var('x')
-        while True:
-            user_input = input("Definisci una funzione matematica con una variabile x\n")
-            if "x" in user_input:
-                break
-            else:
-                print("All'interno della funzione ci dev'essere la variabile x, riprova")
-        func = lambdify(x, sympify(user_input))
-    elif n_variables == 2:
-        var('x y')
-        while True:
-            user_input = input("Definisci una funzione matematica con due variabili x e y\n")
-            if "x" in user_input:
-                if "y" in user_input:
-                    break
-                else:
-                    print(
-                        "All'interno della funzione non c'è la variabile y, ricorda che devi inserire sia x che y, riprova")
-            else:
-                print(
-                    "All'interno della funzione non c'è la variabile x, ricorda che devi inserire sia x che y, riprova")
-        func = lambdify((x, y), sympify(user_input))
-    print("Test funzione:")
-    if n_variables == 1:
-        print("La tua funzione con input 2 da come risultato: {}".format(func(2)))
-    else:
-        print("La tua funzione con input x=2 e y=2 da come risultato: {}".format(func(2, 2)))
-    return func
-
-
-def getActivation(layer):
-    print("Che funzione di attivazione vuoi utilizzare nello strato {}?\n"
-          "1) Sigmoide\n"
-          "2) Definita da input\n".format(layer))
-    choice = getUserAmount(1, 2)
-    if choice == 1:
-        f = sigmoid
-    else:
-        f = getUserFunction(1)
-    return f
-
-
-def getErrorFunc():
-    print("Che funzione di errore vuoi utilizzare?\n"
-          "1) Somma dei quadrati\n"
-          "2) Definita da input\n")
-    choice = getUserAmount(1, 2)
-    if choice == 1:
-        f = sum_square
-    else:
-        f = getUserFunction(2)
-    return f
 
 
 mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
 training_set = []
 validation_set = []
 test_set = []
-warning = True
 #   Mi prendo le prime 200 immagini per il training e le prime 100 per il validation e per il test
 for i in range(200):
     elem = {'input': mnist.train.images[i], 'label': mnist.train.labels[i]}
@@ -311,32 +224,32 @@ for i in range(200):
         validation_set.append(elem)
         elem = {'input': mnist.test.images[i], 'label': mnist.test.labels[i]}
         test_set.append(elem)
-
+var('x')
 print("Scegli cosa vuoi fare dalla seguente lista:")
 while True:
     print("0) Chiudi il programma\n"
           "1) Effettua un training di una rete neurale in maniera manuale\n"
           "2) Confronto tra training con PCA e training con rete autoassociativa\n")
-    choice = getUserAmount(0, 2)
+    choice = ut.getUserAmount(0, 2)
     if choice == 0:
         sys.exit()
     elif choice == 1:
         print("Quanti strati interni vuoi all'interno della tua rete?")
-        n_layers = getUserAmount(1, 10)
+        n_layers = ut.getUserAmount(1, 10)
         dimensions = np.zeros(n_layers + 2)
         dimensions[0] = len(training_set[0]['input'])
         dimensions[n_layers + 1] = 10
         functions = {}
         for l in range(1, n_layers + 1):
             print("Inserisci il numero di nodi al livello {}".format(l))
-            dimensions[l] = getUserAmount(1, 900)
-            functions[l] = getActivation(l)
-        functions[n_layers + 1] = getActivation(n_layers + 1)
-        NN = Net(dimensions, functions, getErrorFunc())
+            dimensions[l] = ut.getUserAmount(1, 900)
+            functions[l] = ut.getActivation(l)
+        functions[n_layers + 1] = ut.getActivation(n_layers + 1)
+        NN = Net(dimensions, functions, ut.getErrorFunc())
         print("Vuoi utilizzare il learning batch o online?\n"
               "0) Batch\n"
               "1) Online\n")
-        NN.train_net(training_set, validation_set, 50, 0.5, 10, getUserAmount(0, 1))
+        NN.train_net(training_set, validation_set, 50, 0.5, 10, ut.getUserAmount(0, 1))
 
         print("\n" * 10)
         continue
@@ -358,10 +271,10 @@ while True:
         dimensions = np.zeros(3)
         dimensions[0] = len(training_set_PCA[0]['input'])
         print("inserisci il numero di nodi nello strato nascosto")
-        dimensions[1] = getUserAmount(1, 900)
+        dimensions[1] = ut.getUserAmount(1, 900)
         dimensions[2] = 10
-        functions = {1: getActivation(1), 2: getActivation(2)}
-        NN_PCA = Net(dimensions, functions, getErrorFunc())
+        functions = {1: ut.getActivation(1), 2: ut.getActivation(2)}
+        NN_PCA = Net(dimensions, functions, ut.getErrorFunc())
         NN_PCA.train_net(training_set_PCA, validation_set_PCA, 50, 0.5, 10)
 
         # Test Rete Autoassociativa
