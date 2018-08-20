@@ -61,71 +61,32 @@ class Net:
         _, a = self.feed_forward(x)
         return a[self.n_layers]
 
+    def compute_error(self, data_set):
+        # Calcolo dell'errore sul data set
+        error = 0
+        for n in range(len(data_set)):
+            out = self.predict(data_set[n]['input'])
+            error += self.error_function(out, data_set[n]['label'])
+        return error
+
     # learning online
-    def train_net(self, training_set, validation_set, max_epoch, eta, alpha, online_flag=False):
+    def train_net_online(self, training_set, validation_set, max_epoch, eta, alpha):
         best_error_validation = float("inf")  # float("inf") è il valore float dell'inifinito, quindi garantisce
-        error_training = np.zeros(max_epoch)
+        error_training = np.zeros(max_epoch)    # che è il numero più grande rappresentabile dal sistema
         error_validation = np.zeros(max_epoch)
-        for t in range(max_epoch):  # che è il numero più grande rappresentabile dal sistema
-            derivatives_tot = {}
-            lastDerivatives = {}
-            if online_flag:
-                # permutazione del training set
-                np.random.shuffle(training_set)
+        for t in range(max_epoch):
+            # permutazione del training set
+            np.random.shuffle(training_set)
             for n in range(len(training_set)):
                 act, out = self.feed_forward(training_set[n]['input'])
                 derivatives = self.back_propagation(training_set[n]['input'], training_set[n]['label'], out, act)
-                if online_flag:
-                    self.update_weights(derivatives, eta)
-                elif n == 0:
-                    derivatives_tot['weights'] = derivatives['weights']
-                    derivatives_tot['bias'] = derivatives['bias']
-                    error_training[t] = self.error_function(out[self.n_layers], training_set[n]['label'])
-                else:
-                    # last_error_training = error_training
-                    derivatives_tot['weights'] += derivatives['weights']
-                    derivatives_tot['bias'] += derivatives['bias']
-                    error_training[t] += self.error_function(out[self.n_layers], training_set[n]['label'])
-            #    if n % 1000 == 0:  # Queste due righe le ho messe per capire
-            #        print("t", t, "n ", n)  # in fase di run a che punto sta
-            if not online_flag:
-                if not lastDerivatives:
-                    self.update_weights(derivatives_tot, eta)
-                else:
-                    # Applico la RPROP
-                    if t == 1:
-                        updateValuesW = np.empty(self.W)
-                        updateValuesB = np.empty(self.B)
-                    for l in range(1, self.n_layers):
-                        for n in range(len(self.W[l])):
-                            for w in range(len(self.W[l][n])):
-                                if t == 1:
-                                    updateValuesW[l][n][w] = 0.0125  # DELTA0 per ogni connessione, di ogni neurone,
-                                    # di ogni livello
-                                # Aggiorno i pesi
-                                updateValuesW[l][n][w] = self.RPROP(derivatives_tot['weights'][l][n],
-                                                                    lastDerivatives['weights'][l][n],
-                                                                    updateValuesW[l][n], w, error_training[t],
-                                                                    error_training[t - 1])
-                                self.W[l][n][w] += updateValuesW[l][n][w]
-                            if t == 1:
-                                updateValuesB[l][n] = 0.0125  # DELTA0 per ogni bias, di ogni neurone, di ogni livello
-                            # Aggiorno i Bias
-                            self.RPROP(derivatives_tot['bias'][l], lastDerivatives['bias'][l], updateValuesB[l], n,
-                                       error_training[t], error_training[t - 1])
-            if online_flag:
-                # Calcolo dell'errore sul training set
-                for n in range(len(training_set)):
-                    _, out = self.feed_forward(training_set[n]['input'])
-                    error_training[t] += self.error_function(out[self.n_layers], training_set[n]['label'])
-            #       if n % 1000 == 0:
-            #           print("t", t, "err train ", n)
+                self.update_weights(derivatives, eta)
+                if n % 1000 == 0:  # Queste due righe le ho messe per capire
+                    print("t", t, "n ", n)  # in fase di run a che punto sta
+            # Calcolo dell'errore sul training set
+            error_training[t] += self.compute_error(training_set)
             # Calcolo dell'errore sul validation
-            for n in range(len(validation_set)):
-                _, out = self.feed_forward(validation_set[n]['input'])
-                error_validation += self.error_function(out[self.n_layers], validation_set[n]['label'])
-            #    if n % 1000 == 0:
-            #       print("t ", t, "err_valid ", n)
+            error_validation[t] += self.compute_error(validation_set)
             # La rete di questo passo è migliore?
             if best_error_validation > error_validation[t]:
                 best_error_validation = error_validation[t]
@@ -137,7 +98,72 @@ class Net:
                 break
         self.W = best_W
         self.B = best_B
-        return error_training, error_validation
+        return np.resize(error_training, t), np.resize(error_validation, t)
+
+    def train_net_batch(self, training_set, validation_set, max_epoch, eta, alpha):
+        best_error_validation = float("inf")  # float("inf") è il valore float dell'inifinito, quindi garantisce
+        error_training = np.zeros(max_epoch)    # che è il numero più grande rappresentabile dal sistema
+        error_validation = np.zeros(max_epoch)
+        lastDerivatives = {}
+        for t in range(max_epoch):
+            derivatives_tot = {}
+            for n in range(len(training_set)):
+                act, out = self.feed_forward(training_set[n]['input'])
+                derivatives = self.back_propagation(training_set[n]['input'], training_set[n]['label'], out, act)
+                if n == 0:
+                    derivatives_tot = derivatives
+                else:
+                    for l in range(self.n_layers - 1):
+                        derivatives_tot['weights'][l] = np.add(derivatives_tot['weights'][l], derivatives['weights'][l])
+                        derivatives_tot['bias'][l] = np.add(derivatives_tot['bias'][l], derivatives['bias'][l])
+                error_training[t] += self.error_function(out[self.n_layers], training_set[n]['label'])
+                if n % 1000 == 0:  # Queste due righe le ho messe per capire
+                    print("t", t, "n ", n)  # in fase di run a che punto sta
+            if not any(lastDerivatives):
+                self.update_weights(derivatives_tot, eta)
+                lastDerivatives = derivatives_tot
+            else:
+                # Applico la RPROP
+                if t == 1:
+                    updateValuesW = {}
+                    updateValuesB = {}
+                    for k in range(self.n_layers - 1):
+                        updateValuesW[k + 1] = np.empty([self.W[k + 1].shape[1], self.W[k + 1].shape[0]])
+                        updateValuesB[k + 1] = np.empty(self.B[k + 1].shape)
+                for l in range(1, self.n_layers):
+                    for n in range(self.W[l].shape[1]):
+                        for w in range(self.W[l].shape[0]):
+                            if t == 1:
+                                updateValuesW[l][n][w] = 0.0125  # DELTA0 per ogni connessione, di ogni neurone,
+                                                                # di ogni livello
+                            # Aggiorno i pesi
+                            updateValuesW[l][n][w] = self.RPROP(derivatives_tot['weights'][l - 1][n],
+                                                                lastDerivatives['weights'][l - 1][n],
+                                                                updateValuesW[l][n], w, error_training[t],
+                                                                error_training[t - 1])
+                            self.W[l][w][n] += updateValuesW[l][n][w]
+                    for n in range(len(self.B[l])):
+                        if t == 1:
+                            updateValuesB[l][n] = 0.0125  # DELTA0 per ogni bias, di ogni neurone, di ogni livello
+                        # Aggiorno i Bias
+                        updateValuesB[l][n] = self.RPROP(derivatives_tot['bias'][l - 1], lastDerivatives['bias'][l - 1],
+                                                         updateValuesB[l], n,
+                                                         error_training[t], error_training[t - 1])
+                        self.B[l][n] += updateValuesB[l][n]
+            # Calcolo dell'errore sul validation
+            error_validation[t] += self.compute_error(validation_set)
+            # La rete di questo passo è migliore?
+            if best_error_validation > error_validation[t]:
+                best_error_validation = error_validation[t]
+                best_W = cp.copy(self.W)
+                best_B = cp.copy(self.B)
+            # Applico il criterio di fermata GL descritto in "Early Stopping, but when?"
+            glt = 100 * (error_validation[t] / best_error_validation - 1)
+            if glt > alpha:
+                break
+        self.W = best_W
+        self.B = best_B
+        return np.resize(error_training, t), np.resize(error_validation, t)
 
     def back_propagation(self, input, labels, outputs, node_act):
         # Calcolo delta
@@ -284,76 +310,37 @@ while True:
         print("\n" * 10)
         continue
 
-"""
-# Codice per stampare a video un immagine del mnist in bianco e nero
-import matplotlib.image as mpimg
-import sklearn as skl
 
-mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
-# Data= np.concatenate((mnist.train.images, mnist.validation.images, mnist.test.images))
-# Labels= np.concatenate((mnist.train.labels, mnist.validation.labels, mnist.test.labels))
-print(type(mnist.train.images), len(mnist.train.images))
-a = mnist.train.images[1]
-print(type(a), len(a))
-plt.imshow(np.ndarray.reshape(a, (28, 28)), cmap=plt.cm.binary)
-plt.show()
-print(mnist.train.labels[1])
-
-# con quello di sopra faccio la riduzione della dimensionalità PCA built-in
-from sklearn import decomposition
-
-soglia_pca = 0.7
-pca = decomposition.PCA(soglia_pca)
-pca.fit(mnist.train.images)
-Data = pca.transform(mnist.train.images)
-print("nuova dimensione = ", len(Data[1]))
-data2 = pca.inverse_transform(Data)
-print(len(data2[1]))
-plt.imshow(np.ndarray.reshape(data2[1], (28, 28)), cmap=plt.cm.binary)
-plt.show()
-
-# adesso testo la PCA che ho sviluppato
-soglia_pca = 0.7
-new_dataset, matrix_w = PrincipalComponentAnalisys(mnist.train.images, soglia_pca)
-
-print(new_dataset.shape)
-data2 = np.dot(new_dataset, matrix_w.transpose())
-print(data2.shape)
-plt.imshow(np.ndarray.reshape(data2[1], (28, 28)), cmap=plt.cm.binary)
-plt.show()
-
-functions = {}
+# import  netFunctions as nf
 #
-x = var('x')  # the possible variable names must be known beforehand...
-user_input = 'x'  # Simulo l'input dell'utente
-expr = sympify(user_input)
-f = lambdify(x, expr)  # Con questo si trasforma l'input in una funzione
-# functions[1] = functions[2] = f
-functions[1] = functions[2] = sigmoid
-# genero un training set
-training_set = []
-for i in range(len(mnist.train.images)):
-    elem = {'input': mnist.train.images[i], 'label': mnist.train.images[i]}
-    training_set.append(elem)
-# genero un validation set
-validation_set = []
-for i in range(len(mnist.validation.images)):
-    elem = {'input': mnist.validation.images[i], 'label': mnist.validation.images[i]}
-    validation_set.append(elem)
-
-print("prova rete autoassociativa")
-print(len(mnist.train.images[0]), new_dataset.shape[1], len(mnist.train.images[0]))
-NN = Net([len(mnist.train.images[0]), new_dataset.shape[1], len(mnist.train.images[0])], functions)
-NN.train_net(training_set, validation_set, 20, 0.5, sum_square, float("inf"), True)  # criterio di fermata annullato
-
-# test con lo stesso numero di sopra
-_, risposta = NN.feed_forward(mnist.train.images[1])
-plt.imshow(np.ndarray.reshape(risposta[NN.n_layers], (28, 28)), cmap=plt.cm.binary)
-plt.show()
-# adesso provo con un 'immagine del test set
-plt.imshow(np.ndarray.reshape(mnist.test.images[1000], (28, 28)), cmap=plt.cm.binary)
-plt.show()
-_, risposta = NN.feed_forward(mnist.test.images[1000])
-plt.imshow(np.ndarray.reshape(risposta[NN.n_layers], (28, 28)), cmap=plt.cm.binary)
-plt.show()
-"""
+# # Codice per stampare a video un immagine del mnist in bianco e nero
+# import matplotlib.pyplot as plt
+# import matplotlib.image as mpimg
+# import sklearn as skl
+# mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
+#
+# #altro test
+# training_set = []
+# dimensions = np.zeros(3)
+# functions = {}
+# functions[1] = functions[2] = nf.sigmoid
+# #for i in range(len(mnist.train.images)):
+# for i in range(400):
+#     elem = {'input': mnist.train.images[i], 'label': mnist.train.labels[i]}
+#     training_set.append(elem)
+# #validation_set = {'input': mnist.validation.images, 'label': mnist.validation.labels}#mnist.validation.labels[0:50]
+# # genero un validation set
+# validation_set = []
+# #for i in range(len(mnist.validation.images)):
+# for i in range(100):
+#     elem = {'input': mnist.validation.images[i], 'label': mnist.validation.labels[i]}
+#     validation_set.append(elem)
+# dimensions[0] = len(mnist.train.images[0])
+# dimensions[1] = 100
+# dimensions[2] = len(mnist.train.labels[0])
+# NN = Net(dimensions , functions, nf.sum_square)
+# e_t, e_v = NN.train_net_batch(training_set, validation_set, 100, 0.5, 10)
+# plt.plot(e_t, 'b*')
+# plt.show()
+# plt.plot(e_v, 'r*')
+# plt.show()
