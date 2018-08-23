@@ -105,6 +105,8 @@ class Net:
         error_training = np.zeros(max_epoch)    # che è il numero più grande rappresentabile dal sistema
         error_validation = np.zeros(max_epoch)
         lastDerivatives = {}
+        updateValuesW = {}
+        updateValuesB = {}
         for t in range(max_epoch):
             derivatives_tot = {}
             for n in range(len(training_set)):
@@ -128,8 +130,6 @@ class Net:
             else:
                 # Applico la RPROP
                 if t == 1:
-                    updateValuesW = {}
-                    updateValuesB = {}
                     for k in range(self.n_layers - 1):
                         updateValuesW[k + 1] = np.empty([self.W[k + 1].shape[1], self.W[k + 1].shape[0]])
                         updateValuesB[k + 1] = np.empty(self.B[k + 1].shape)
@@ -141,13 +141,14 @@ class Net:
                                                                 # di ogni livello
                             # Aggiorno i pesi
                             self.W[l][w][n] += self.RPROP(derivatives_tot['weights'][l - 1][n],
-                                                                lastDerivatives['weights'][l - 1][n],
-                                                                updateValuesW[l][n], w)
+                                                          lastDerivatives['weights'][l - 1][n],
+                                                          updateValuesW[l][n], w, error_training[t],
+                                                          error_training[t - 1])
                         if t == 1:
                             updateValuesB[l][n] = 0.0125  # DELTA0 per ogni bias, di ogni neurone, di ogni livello
                         # Aggiorno i Bias
                         self.B[l][n] += self.RPROP(derivatives_tot['bias'][l - 1], lastDerivatives['bias'][l - 1],
-                                                         updateValuesB[l], n)
+                                                   updateValuesB[l], n, error_training[t], error_training[t - 1])
             lastDerivatives = derivatives_tot
             # Calcolo dell'errore sul validation
             error_validation[t] += self.compute_error(validation_set)
@@ -184,20 +185,22 @@ class Net:
         derivatives = {'weights': derivate_W, 'bias': derivate_B}
         return derivatives
 
-    def RPROP(self, derivatives, lastDerivatives, lastDelta, i):
-        if np.sign(derivatives[i]) != 0:
-            change = np.sign(derivatives[i] * lastDerivatives[i])
-            if change > 0:
-                lastDelta[i] = min(lastDelta[i] * ETA_P, MAX_STEP)
-            elif change < 0:
-                lastDelta[i] = max(lastDelta[i] * ETA_M, MIN_STEP)
-            if np.sign(derivatives[i]) > 0:
-                deltaW = -lastDelta[i]
-            else:
-                deltaW = lastDelta[i]
-        else:
+    def RPROP(self, derivatives, lastDerivatives, lastDelta, i, actualError, lastError):
+        change = np.sign(derivatives[i] * lastDerivatives[i])
+        if change > 0:
+            lastDelta[i] = delta = min(lastDelta[i] * ETA_P, MAX_STEP)
+            deltaW = -np.sign(derivatives[i]) * delta
+        elif change < 0:
             deltaW = 0
+            delta = max(lastDelta[i] * ETA_M, MIN_STEP)
+            if actualError > lastError:
+                deltaW = -lastDelta[i]
+            lastDelta[i] = delta
+            derivatives[i] = 0
+        else:
+            deltaW = -np.sign(derivatives[i]) * lastDelta[i]
         return deltaW
+
 
     def update_weights(self, derivatives, eta):
         # Aggiornamento dei pesi Metodo discesa del gradiente
@@ -272,7 +275,10 @@ while True:
         print("Vuoi utilizzare il learning batch o online?\n"
               "0) Batch\n"
               "1) Online\n")
-        NN.train_net(training_set, validation_set, 50, 0.5, 10, ut.getUserAmount(0, 1))
+        if ut.getUserAmount(0, 1):
+            NN.train_net_online(training_set, validation_set, 50, 0.5, 10)
+        else:
+            NN.train_net_batch(training_set, validation_set, 50, 0.5, 10)
 
         print("\n" * 10)
         continue
@@ -298,116 +304,10 @@ while True:
         dimensions[2] = 10
         functions = {1: ut.getActivation(1), 2: ut.getActivation(2)}
         NN_PCA = Net(dimensions, functions, ut.getErrorFunc())
-        NN_PCA.train_net(training_set_PCA, validation_set_PCA, 50, 0.5, 10)
+        NN_PCA.train_net_batch(training_set_PCA, validation_set_PCA, 50, 0.5, 10)
 
         # Test Rete Autoassociativa
 
         print("\n" * 10)
         continue
 
-
-# import  netFunctions as nf
-#
-# # Codice per stampare a video un immagine del mnist in bianco e nero
-# import matplotlib.pyplot as plt
-# import matplotlib.image as mpimg
-# import sklearn as skl
-# mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
-#
-# #altro test
-# training_set = []
-# dimensions = np.zeros(3)
-# functions = {}
-# functions[1] = functions[2] = nf.sigmoid
-# #for i in range(len(mnist.train.images)):
-# for i in range(400):
-#     elem = {'input': mnist.train.images[i], 'label': mnist.train.labels[i]}
-#     training_set.append(elem)
-# #validation_set = {'input': mnist.validation.images, 'label': mnist.validation.labels}#mnist.validation.labels[0:50]
-# # genero un validation set
-# validation_set = []
-# #for i in range(len(mnist.validation.images)):
-# for i in range(100):
-#     elem = {'input': mnist.validation.images[i], 'label': mnist.validation.labels[i]}
-#     validation_set.append(elem)
-# dimensions[0] = len(mnist.train.images[0])
-# dimensions[1] = 100
-# dimensions[2] = len(mnist.train.labels[0])
-# NN = Net(dimensions , functions, nf.sum_square)
-# e_t, e_v = NN.train_net_batch(training_set, validation_set, 100, 0.25, 10)
-# plt.plot(e_t, 'b*')
-# plt.show()
-# plt.plot(e_v, 'r*')
-# plt.show()
-#
-# soglia_pca = 0.8
-# # pca = decomposition.PCA(soglia_pca)
-# # pca.fit(mnist.train.images)
-# # Data = pca.transform(mnist.train.images)
-# # print("nuova dimensione = ", len(Data[1]))
-# # data2 = pca.inverse_transform(Data)
-# # print(len(data2[1]))
-# # plt.imshow(np.ndarray.reshape(data2[1],(28,28)),cmap=plt.cm.binary)
-# # plt.show()
-#
-#
-# #adesso testo la PCA che ho sviluppato
-# new_dataset,matrix_w = PCA(mnist.train.images, soglia_pca)
-# print(new_dataset.shape)
-# data2 = np.dot(new_dataset, matrix_w.transpose())
-# print(data2.shape)
-# plt.imshow(np.ndarray.reshape(data2[1],(28,28)),cmap=plt.cm.binary)
-# plt.show()
-#
-#
-# functions = {}
-# # #
-# # x = var('x')  # the possible variable names must be known beforehand...
-# # user_input = 'x'  # Simulo l'input dell'utente
-# # expr = sympify(user_input)
-# # f = lambdify(x, expr)  # Con questo si trasforma l'input in una funzione
-# #
-# functions[1] = functions[2] = nf.sigmoid
-# #training_set = {'input': mnist.train.images, 'label': mnist.train.images}#mnist.train.images[0::200]
-# # genero un training set
-# training_set = []
-# #for i in range(len(mnist.train.images)):
-# for i in range(400):
-#     elem = {'input': mnist.train.images[i], 'label': mnist.train.images[i]}
-#     training_set.append(elem)
-# #validation_set = {'input': mnist.validation.images, 'label': mnist.validation.labels}#mnist.validation.labels[0:50]
-# # genero un validation set
-# validation_set = []
-# #for i in range(len(mnist.validation.images)):
-# for i in range(100):
-#     elem = {'input': mnist.validation.images[i], 'label': mnist.validation.images[i]}
-#     validation_set.append(elem)
-# print("prova rete autoassociativa")
-# #print(len(mnist.train.images[0]), new_dataset.shape[1], len(mnist.train.images[0]))
-# dimensions = np.zeros(3)
-# dimensions[0] = len(mnist.train.images[0])
-# dimensions[1] = new_dataset.shape[1]
-# dimensions[2] = len(mnist.train.images[0])
-# NN = Net(dimensions , functions, nf.sum_square)
-# flag = False
-# e_t, e_v = NN.train_net_batch(training_set, validation_set, 100, 0.25, 10)
-# plt.plot(e_t, 'b*')
-# plt.show()
-# plt.plot(e_v, 'r*')
-# plt.show()
-# # test con lo stesso numero di sopra
-# _, risposta = NN.feed_forward(mnist.train.images[1])
-# plt.imshow(np.ndarray.reshape(risposta[NN.n_layers], (28, 28)), cmap=plt.cm.binary)
-# plt.show()
-# # adesso provo con un 'immagine del validation set
-# plt.imshow(np.ndarray.reshape(mnist.validation.images[1000], (28, 28)), cmap=plt.cm.binary)
-# plt.show()
-# _, risposta = NN.feed_forward(mnist.validation.images[1000])
-# plt.imshow(np.ndarray.reshape(risposta[NN.n_layers], (28, 28)), cmap=plt.cm.binary)
-# plt.show()
-# # adesso provo con un 'immagine del test set
-# plt.imshow(np.ndarray.reshape(mnist.test.images[1000], (28, 28)), cmap=plt.cm.binary)
-# plt.show()
-# _, risposta = NN.feed_forward(mnist.test.images[1000])
-# plt.imshow(np.ndarray.reshape(risposta[NN.n_layers], (28, 28)), cmap=plt.cm.binary)
-# plt.show()
