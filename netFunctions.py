@@ -30,11 +30,11 @@ def tanh_(x):
     return 1 - tanh(x) ** 2
 
 
-def linear(x):
+def identity(x):
     return x
 
 
-def linear_(x):
+def identity_(x):
     return 1
 
 

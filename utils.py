@@ -56,7 +56,7 @@ def getActivation(layer):
           "1) Sigmoide\n"
           "2) ReLU\n"
           "3) Tangente iperbolica\n"
-          "4) Lineare\n"
+          "4) Identità\n"
           "5) Definita da input\n".format(layer))
     choice = getUserAmount(1, 5)
     if choice == 1:
@@ -66,7 +66,7 @@ def getActivation(layer):
     elif choice == 3:
         f = nf.tanh
     elif choice == 4:
-        f = nf.linear
+        f = nf.identity
     else:
         f = getUserFunction(1)
     return f

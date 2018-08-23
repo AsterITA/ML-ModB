@@ -26,22 +26,22 @@ class Net:
         self.B = {}
         dimensions = dimensions.astype(int)
 
-        for i in range(len(dimensions) - 1):
+        for i in range(1, len(dimensions)):
 
-            self.W[i + 1] = np.random.randn(dimensions[i], dimensions[i + 1]) / np.sqrt(dimensions[i])  # Pesi
+            self.W[i] = np.random.randn(dimensions[i - 1], dimensions[i]) / np.sqrt(dimensions[i - 1])  # Pesi
             # The drawn weights are eventually divided by the square root of the current layers dimensions.
             # This is called Xavier initialization and helps prevent neuron activations from being too large or too
-            self.B[i + 1] = np.zeros(dimensions[i + 1])  # Bias
-            if self.activations[i + 1] == nf.sigmoid:
-                self.primes[i + 1] = nf.sigmoid_
-            elif self.activations[i + 1] == nf.ReLU:
-                self.primes[i + 1] = nf.ReLU_
-            elif self.activations[i + 1] == nf.tanh:
-                self.primes[i + 1] = nf.tanh_
-            elif self.activations[i + 1] == nf.linear:
-                self.primes[i + 1] = nf.linear_
+            self.B[i] = np.zeros(dimensions[i])  # Bias
+            if self.activations[i] == nf.sigmoid:
+                self.primes[i] = nf.sigmoid_
+            elif self.activations[i] == nf.ReLU:
+                self.primes[i] = nf.ReLU_
+            elif self.activations[i] == nf.tanh:
+                self.primes[i] = nf.tanh_
+            elif self.activations[i] == nf.identity:
+                self.primes[i] = nf.identity_
             else:
-                self.primes[i + 1] = lambdify(x, diff(self.activations[i + 1](x), x))
+                self.primes[i] = lambdify(x, diff(self.activations[i](x), x))
 
     # Forward propagation
     def feed_forward(self, x):
@@ -74,6 +74,7 @@ class Net:
         best_error_validation = float("inf")  # float("inf") è il valore float dell'inifinito, quindi garantisce
         error_training = np.zeros(max_epoch)    # che è il numero più grande rappresentabile dal sistema
         error_validation = np.zeros(max_epoch)
+        best_W = best_B = 0
         for t in range(max_epoch):
             # permutazione del training set
             np.random.shuffle(training_set)
@@ -81,12 +82,11 @@ class Net:
                 act, out = self.feed_forward(training_set[n]['input'])
                 derivatives = self.back_propagation(training_set[n]['input'], training_set[n]['label'], out, act)
                 self.update_weights(derivatives, eta)
-                if n % 1000 == 0:  # Queste due righe le ho messe per capire
-                    print("t", t, "n ", n)  # in fase di run a che punto sta
             # Calcolo dell'errore sul training set
             error_training[t] += self.compute_error(training_set)
             # Calcolo dell'errore sul validation
             error_validation[t] += self.compute_error(validation_set)
+            print("errore a ", t, " = ", error_training[t])
             # La rete di questo passo è migliore?
             if best_error_validation > error_validation[t]:
                 best_error_validation = error_validation[t]
@@ -96,14 +96,16 @@ class Net:
             glt = 100 * (error_validation[t] / best_error_validation - 1)
             if glt > alpha:
                 break
-        self.W = best_W
-        self.B = best_B
+        if best_W != 0:
+            self.W = best_W
+            self.B = best_B
         return np.resize(error_training, t), np.resize(error_validation, t)
 
     def train_net_batch(self, training_set, validation_set, max_epoch, eta, alpha):
         best_error_validation = float("inf")  # float("inf") è il valore float dell'inifinito, quindi garantisce
         error_training = np.zeros(max_epoch)    # che è il numero più grande rappresentabile dal sistema
         error_validation = np.zeros(max_epoch)
+        best_W = best_B = 0
         lastDerivatives = {}
         updateValuesW = {}
         updateValuesB = {}
@@ -119,8 +121,6 @@ class Net:
                         derivatives_tot['weights'][l] = np.add(derivatives_tot['weights'][l], derivatives['weights'][l])
                         derivatives_tot['bias'][l] = np.add(derivatives_tot['bias'][l], derivatives['bias'][l])
                 error_training[t] += self.error_function(out[self.n_layers], training_set[n]['label'])
-                # if n % 1000 == 0:  # Queste due righe le ho messe per capire
-                #     print("t", t, "n ", n)  # in fase di run a che punto sta
             print("errore a ", t , " = ", error_training[t])
             for l in range(self.n_layers - 1):
                 derivatives_tot['weights'][l] /= len(training_set)
@@ -130,9 +130,9 @@ class Net:
             else:
                 # Applico la RPROP
                 if t == 1:
-                    for k in range(self.n_layers - 1):
-                        updateValuesW[k + 1] = np.empty([self.W[k + 1].shape[1], self.W[k + 1].shape[0]])
-                        updateValuesB[k + 1] = np.empty(self.B[k + 1].shape)
+                    for k in range(1, self.n_layers):
+                        updateValuesW[k] = np.empty([self.W[k].shape[1], self.W[k].shape[0]])
+                        updateValuesB[k] = np.empty(self.B[k].shape)
                 for l in range(1, self.n_layers):
                     for n in range(self.W[l].shape[1]):
                         for w in range(self.W[l].shape[0]):
@@ -161,8 +161,9 @@ class Net:
             glt = 100 * (error_validation[t] / best_error_validation - 1)
             if glt > alpha:
                 break
-        self.W = best_W
-        self.B = best_B
+        if best_W != 0:
+            self.W = best_W
+            self.B = best_B
         return np.resize(error_training, t + 1), np.resize(error_validation, t + 1)
 
     def back_propagation(self, input, labels, outputs, node_act):
@@ -273,9 +274,9 @@ while True:
         functions[n_layers + 1] = ut.getActivation(n_layers + 1)
         NN = Net(dimensions, functions, ut.getErrorFunc())
         print("Vuoi utilizzare il learning batch o online?\n"
-              "0) Batch\n"
-              "1) Online\n")
-        if ut.getUserAmount(0, 1):
+              "1) Batch\n"
+              "2) Online\n")
+        if ut.getUserAmount(1, 2) == 2:
             NN.train_net_online(training_set, validation_set, 50, 0.5, 10)
         else:
             NN.train_net_batch(training_set, validation_set, 50, 0.5, 10)
@@ -297,7 +298,7 @@ while True:
                 validation_set_PCA.append(elem)
                 elem = {'input': np.dot(test_set[i]['input'], matrix_w), 'label': mnist.test.labels[i]}
                 test_set_PCA.append(elem)
-        dimensions = np.zeros(3)
+        dimensions = np.empty(3)
         dimensions[0] = len(training_set_PCA[0]['input'])
         print("inserisci il numero di nodi nello strato nascosto")
         dimensions[1] = ut.getUserAmount(1, 900)
