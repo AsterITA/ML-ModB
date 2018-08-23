@@ -117,11 +117,14 @@ class Net:
                         derivatives_tot['weights'][l] = np.add(derivatives_tot['weights'][l], derivatives['weights'][l])
                         derivatives_tot['bias'][l] = np.add(derivatives_tot['bias'][l], derivatives['bias'][l])
                 error_training[t] += self.error_function(out[self.n_layers], training_set[n]['label'])
-                if n % 1000 == 0:  # Queste due righe le ho messe per capire
-                    print("t", t, "n ", n)  # in fase di run a che punto sta
+                # if n % 1000 == 0:  # Queste due righe le ho messe per capire
+                #     print("t", t, "n ", n)  # in fase di run a che punto sta
+            print("errore a ", t , " = ", error_training[t])
+            for l in range(self.n_layers - 1):
+                derivatives_tot['weights'][l] /= len(training_set)
+                derivatives_tot['bias'][l] /= len(training_set)
             if not any(lastDerivatives):
                 self.update_weights(derivatives_tot, eta)
-                lastDerivatives = derivatives_tot
             else:
                 # Applico la RPROP
                 if t == 1:
@@ -137,19 +140,15 @@ class Net:
                                 updateValuesW[l][n][w] = 0.0125  # DELTA0 per ogni connessione, di ogni neurone,
                                                                 # di ogni livello
                             # Aggiorno i pesi
-                            updateValuesW[l][n][w] = self.RPROP(derivatives_tot['weights'][l - 1][n],
+                            self.W[l][w][n] += self.RPROP(derivatives_tot['weights'][l - 1][n],
                                                                 lastDerivatives['weights'][l - 1][n],
-                                                                updateValuesW[l][n], w, error_training[t],
-                                                                error_training[t - 1])
-                            self.W[l][w][n] += updateValuesW[l][n][w]
-                    for n in range(len(self.B[l])):
+                                                                updateValuesW[l][n], w)
                         if t == 1:
                             updateValuesB[l][n] = 0.0125  # DELTA0 per ogni bias, di ogni neurone, di ogni livello
                         # Aggiorno i Bias
-                        updateValuesB[l][n] = self.RPROP(derivatives_tot['bias'][l - 1], lastDerivatives['bias'][l - 1],
-                                                         updateValuesB[l], n,
-                                                         error_training[t], error_training[t - 1])
-                        self.B[l][n] += updateValuesB[l][n]
+                        self.B[l][n] += self.RPROP(derivatives_tot['bias'][l - 1], lastDerivatives['bias'][l - 1],
+                                                         updateValuesB[l], n)
+            lastDerivatives = derivatives_tot
             # Calcolo dell'errore sul validation
             error_validation[t] += self.compute_error(validation_set)
             # La rete di questo passo è migliore?
@@ -163,7 +162,7 @@ class Net:
                 break
         self.W = best_W
         self.B = best_B
-        return np.resize(error_training, t), np.resize(error_validation, t)
+        return np.resize(error_training, t + 1), np.resize(error_validation, t + 1)
 
     def back_propagation(self, input, labels, outputs, node_act):
         # Calcolo delta
@@ -185,23 +184,19 @@ class Net:
         derivatives = {'weights': derivate_W, 'bias': derivate_B}
         return derivatives
 
-    def RPROP(self, derivatives, lastDerivatives, lastDelta, i, actualError, lastError):
-        change = np.sign(derivatives[i] * lastDerivatives[i])
-        if change > 0:
-            delta = min(lastDelta[i] * ETA_P, MAX_STEP)
-            deltaW = -np.sign(derivatives[i]) * delta
-            lastDelta[i] = delta
-            lastDerivatives[i] = derivatives[i]
-        elif change < 0:
-            deltaW = 0
-            delta = max(lastDelta[i] * ETA_M, MIN_STEP)
-            if actualError > lastError:
+    def RPROP(self, derivatives, lastDerivatives, lastDelta, i):
+        if np.sign(derivatives[i]) != 0:
+            change = np.sign(derivatives[i] * lastDerivatives[i])
+            if change > 0:
+                lastDelta[i] = min(lastDelta[i] * ETA_P, MAX_STEP)
+            elif change < 0:
+                lastDelta[i] = max(lastDelta[i] * ETA_M, MIN_STEP)
+            if np.sign(derivatives[i]) > 0:
                 deltaW = -lastDelta[i]
-            lastDelta[i] = delta
-            lastDerivatives[i] = derivatives[i] = 0
+            else:
+                deltaW = lastDelta[i]
         else:
-            deltaW = -np.sign(derivatives[i]) * lastDelta[i]
-            lastDerivatives[i] = derivatives[i]
+            deltaW = 0
         return deltaW
 
     def update_weights(self, derivatives, eta):
@@ -339,8 +334,80 @@ while True:
 # dimensions[1] = 100
 # dimensions[2] = len(mnist.train.labels[0])
 # NN = Net(dimensions , functions, nf.sum_square)
-# e_t, e_v = NN.train_net_batch(training_set, validation_set, 100, 0.5, 10)
+# e_t, e_v = NN.train_net_batch(training_set, validation_set, 100, 0.25, 10)
 # plt.plot(e_t, 'b*')
 # plt.show()
 # plt.plot(e_v, 'r*')
+# plt.show()
+#
+# soglia_pca = 0.8
+# # pca = decomposition.PCA(soglia_pca)
+# # pca.fit(mnist.train.images)
+# # Data = pca.transform(mnist.train.images)
+# # print("nuova dimensione = ", len(Data[1]))
+# # data2 = pca.inverse_transform(Data)
+# # print(len(data2[1]))
+# # plt.imshow(np.ndarray.reshape(data2[1],(28,28)),cmap=plt.cm.binary)
+# # plt.show()
+#
+#
+# #adesso testo la PCA che ho sviluppato
+# new_dataset,matrix_w = PCA(mnist.train.images, soglia_pca)
+# print(new_dataset.shape)
+# data2 = np.dot(new_dataset, matrix_w.transpose())
+# print(data2.shape)
+# plt.imshow(np.ndarray.reshape(data2[1],(28,28)),cmap=plt.cm.binary)
+# plt.show()
+#
+#
+# functions = {}
+# # #
+# # x = var('x')  # the possible variable names must be known beforehand...
+# # user_input = 'x'  # Simulo l'input dell'utente
+# # expr = sympify(user_input)
+# # f = lambdify(x, expr)  # Con questo si trasforma l'input in una funzione
+# #
+# functions[1] = functions[2] = nf.sigmoid
+# #training_set = {'input': mnist.train.images, 'label': mnist.train.images}#mnist.train.images[0::200]
+# # genero un training set
+# training_set = []
+# #for i in range(len(mnist.train.images)):
+# for i in range(400):
+#     elem = {'input': mnist.train.images[i], 'label': mnist.train.images[i]}
+#     training_set.append(elem)
+# #validation_set = {'input': mnist.validation.images, 'label': mnist.validation.labels}#mnist.validation.labels[0:50]
+# # genero un validation set
+# validation_set = []
+# #for i in range(len(mnist.validation.images)):
+# for i in range(100):
+#     elem = {'input': mnist.validation.images[i], 'label': mnist.validation.images[i]}
+#     validation_set.append(elem)
+# print("prova rete autoassociativa")
+# #print(len(mnist.train.images[0]), new_dataset.shape[1], len(mnist.train.images[0]))
+# dimensions = np.zeros(3)
+# dimensions[0] = len(mnist.train.images[0])
+# dimensions[1] = new_dataset.shape[1]
+# dimensions[2] = len(mnist.train.images[0])
+# NN = Net(dimensions , functions, nf.sum_square)
+# flag = False
+# e_t, e_v = NN.train_net_batch(training_set, validation_set, 100, 0.25, 10)
+# plt.plot(e_t, 'b*')
+# plt.show()
+# plt.plot(e_v, 'r*')
+# plt.show()
+# # test con lo stesso numero di sopra
+# _, risposta = NN.feed_forward(mnist.train.images[1])
+# plt.imshow(np.ndarray.reshape(risposta[NN.n_layers], (28, 28)), cmap=plt.cm.binary)
+# plt.show()
+# # adesso provo con un 'immagine del validation set
+# plt.imshow(np.ndarray.reshape(mnist.validation.images[1000], (28, 28)), cmap=plt.cm.binary)
+# plt.show()
+# _, risposta = NN.feed_forward(mnist.validation.images[1000])
+# plt.imshow(np.ndarray.reshape(risposta[NN.n_layers], (28, 28)), cmap=plt.cm.binary)
+# plt.show()
+# # adesso provo con un 'immagine del test set
+# plt.imshow(np.ndarray.reshape(mnist.test.images[1000], (28, 28)), cmap=plt.cm.binary)
+# plt.show()
+# _, risposta = NN.feed_forward(mnist.test.images[1000])
+# plt.imshow(np.ndarray.reshape(risposta[NN.n_layers], (28, 28)), cmap=plt.cm.binary)
 # plt.show()
