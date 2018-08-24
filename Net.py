@@ -212,18 +212,15 @@ class Net:
 
 def PCA(data_set, soglia):
     # calcola il vettore media del dataset
-    # cov_mat = np.cov(data_set.T)
     mean_vec = np.mean(data_set, axis=0)
     cov_mat = (data_set - mean_vec).T.dot((data_set - mean_vec))  # / (data_set.shape[0])
     # Calcolo autovalori e autovettori
     eig_vals, eig_vecs = np.linalg.eig(cov_mat)
-    print('Eigenvectors ', eig_vecs.shape)
-    print('Eigenvalues ', eig_vals.shape)
     # Calcolo la somma totale degli autovalori
     eig_vals_tot = sum(eig_vals)
-    # Make a list of (eigenvalue, eigenvector) tuples
+    #Creazione liste di tuple del tipo (autovalore, autovettore)
     eig_pairs = [(np.abs(eig_vals[i]), eig_vecs[:, i]) for i in range(len(eig_vals))]
-    # Sort the (eigenvalue, eigenvector) tuples from high to low
+    # Ordinamento decrescente della lista delle tuple in base agli autovalori
     eig_pairs.sort(reverse=True, key=(lambda x: x[0]))
     # prendo le componenti, le quali insieme soddisfano la soglia
     counter = 0.0
@@ -273,19 +270,29 @@ while True:
             functions[l] = ut.getActivation(l)
         functions[n_layers + 1] = ut.getActivation(n_layers + 1)
         NN = Net(dimensions, functions, ut.getErrorFunc())
+        print("inserisci il valore di eta : ")
+        eta = ut.getUserAmountFloat(0, 1, False, False)
+        print("inserisci il numero massimo di epoche : ")
+        max_epoche = ut.getUserAmount(10, 3000)
+        print("inserisci il valore di alpha per la Generalization Loss : ")
+        alpha = ut.getUserAmountFloat(1, 100)
         print("Vuoi utilizzare il learning batch o online?\n"
               "1) Batch\n"
               "2) Online\n")
         if ut.getUserAmount(1, 2) == 2:
-            NN.train_net_online(training_set, validation_set, 50, 0.5, 10)
+            error_train, error_valid = NN.train_net_online(training_set, validation_set, max_epoche, eta, alpha)
         else:
-            NN.train_net_batch(training_set, validation_set, 50, 0.5, 10)
-
-        print("\n" * 10)
+            error_train, error_valid = NN.train_net_batch(training_set, validation_set, max_epoche, eta, alpha)
+        ut.plotGraphErrors(error_train, error_valid, "Addestramento della rete senza riduzione delle dimensioni")
+        risp_giuste = ut.getRightNetResponse(NN, test_set)
+        print("La rete con input l'output interno della rete autoassociativa ha risposto correttamente a ", risp_giuste,
+              "in percentuale ", 100 * risp_giuste / len(test_set), "%")
+        print("\n" * 3)
         continue
     elif choice == 2:
         # TEST PCA
-        soglia_pca = 0.7
+        print("Inserisci la soglia del quantitativo di informazione da preservare dalla PCA")
+        soglia_pca = ut.getUserAmountFloat(50, 100) / 100
         new_dataset, matrix_w = PCA(mnist.train.images[:200], soglia_pca)
         training_set_PCA = []
         validation_set_PCA = []
@@ -304,11 +311,99 @@ while True:
         dimensions[1] = ut.getUserAmount(1, 900)
         dimensions[2] = 10
         functions = {1: ut.getActivation(1), 2: ut.getActivation(2)}
-        NN_PCA = Net(dimensions, functions, ut.getErrorFunc())
-        NN_PCA.train_net_batch(training_set_PCA, validation_set_PCA, 50, 0.5, 10)
-
+        print("inserisci il valore di eta : ")
+        eta = ut.getUserAmountFloat(0, 1, False, False)
+        print("inserisci il numero massimo di epoche : ")
+        max_epoche = ut.getUserAmount(10, 3000)
+        print("inserisci il valore di alpha per la Generalization Loss : ")
+        alpha = ut.getUserAmountFloat(1, 100)
+        error_function = ut.getErrorFunc()
+        NN_PCA = Net(dimensions, functions, error_function)
+        err_train_PCA, err_valid_PCA = NN_PCA.train_net_batch(training_set_PCA, validation_set_PCA, max_epoche, eta, alpha)
+        ut.plotGraphErrors(err_train_PCA, err_valid_PCA, "Addestramento rete con input l'out dell PCA")
+        print("Rete con input della PCA addestrata\n\n")
+        print("Creazione della rete autoassociativa")
         # Test Rete Autoassociativa
+        #addestramento rete autoassociativa
+        #genero dataset per training rete autoassociativa
+        #training set
+        training_set_R = []
+        for i in range(200):
+            elem = {'input': mnist.train.images[i], 'label': mnist.train.images[i]}
+            training_set_R.append(elem)
+        #validation set
+        validation_set_R = []
+        for i in range(100):
+            elem = {'input': mnist.validation.images[i], 'label': mnist.validation.images[i]}
+            validation_set_R.append(elem)
+        #creazione rete associativa
+        hidden_layers = ut.getNumbHiddenLayerRA()
+        dimensions_RA = np.empty(hidden_layers + 2)
+        #fisso il numero di nodi del livello di input e del livello di output
+        dimensions_RA[0] = dimensions_RA[hidden_layers + 1] = len(mnist.train.images[0])
+        #fisso il numero di nodi interni
+        if hidden_layers == 1:
+            dimensions_RA[1] = len(training_set_PCA[0]['input'])
+        else:
+            dimensions_RA[2] = len(training_set_PCA[0]['input'])
+            print("inserisci il numero di nodi del primo strato nascosto")
+            dimensions_RA[1] = ut.getUserAmount(int(dimensions_RA[2] + 1), int(dimensions_RA[0]))
+            print("inserisci il numero di nodi del terzo strato nascosto")
+            dimensions_RA[3] = ut.getUserAmount(dimensions_RA[2] + 1, dimensions_RA[0])
+        #fisso le funzioni di attivazione per ogni livello
+        functions_RA = {}
+        for l in range(1, len(dimensions_RA)):
+            functions_RA[l] = ut.getActivation(l)
+        #inserimento parametri di learning
+        print("inserisci il valore di eta : ")
+        eta_RA = ut.getUserAmountFloat(0, 1, False, False)
+        print("inserisci il numero massimo di epoche : ")
+        max_epoche_RA = ut.getUserAmount(10, 3000)
+        print("inserisci il valore di alpha per la Generalization Loss : ")
+        alpha_RA = ut.getUserAmountFloat(1, 100)
 
-        print("\n" * 10)
+        NN_R = Net(dimensions_RA, functions_RA, nf.sum_square)
+        print("Addestramento della rete autoassociativa iniziato")
+        err_train_R, err_valid_R = NN_R.train_net_batch(training_set_R, validation_set_R, 100, 0.5, 10)
+        ut.plotGraphErrors(err_train_R, err_valid_R, "Addestramento rete autoassociativa")
+        print("Addestramento della rete autoassociativa completato")
+        print("conversione dataset con la rete autoassociativa")
+        #creazione data set con dimensione ridotta
+        training_set_RA = []
+        validation_set_RA = []
+        test_set_RA = []
+        #Creo una rete NN_R2 uguale a NN_R che non ha lo strato di output
+        livelli_R2 = int(len(dimensions_RA) / 2) + 1
+        NN_R2 = Net(dimensions_RA[:livelli_R2], functions_RA, nf.sum_square)
+        for l in range(1, livelli_R2 + 1):
+            NN_R2.W[l] = NN_R.W[l]
+            NN_R2.B[l] = NN_R.B[l]
+        for i in range(200):
+            out = NN_R2.predict(training_set[i]['input'])
+            elem = {'input': out, 'label': mnist.train.labels[i]}
+            training_set_RA.append(elem)
+            if i < 100:
+                out = NN_R2.predict(validation_set[i]['input'])
+                elem = {'input': out, 'label': mnist.validation.labels[i]}
+                validation_set_RA.append(elem)
+                out = NN_R2.predict(test_set[i]['input'])
+                elem = {'input': out, 'label': mnist.test.labels[i]}
+                test_set_RA.append(elem)
+        #Addestramento di una rete con le dimensioni del dataset ridotte con una rete associativa
+        print("Creazione  e addestramento della rete con input l'out interno della rete autoassociativa")
+        NN_RA = Net(dimensions, functions, error_function)
+        err_train_RA, err_valid_RA = NN_RA.train_net_batch(training_set_RA, validation_set_RA, max_epoche, eta, alpha)
+        ut.plotGraphErrors(err_train_RA, err_valid_RA, "Addestramento rete con out interno della rete autoassociativa")
+        print("Elaborazione delle due reti cui rispettivi test set e calcolo delle risposte giuste")
+        #PCA
+        pca_giuste = ut.getRightNetResponse(NN_PCA, test_set_PCA)
+        print("La rete con input l'output della PCA ha risposto correttamente a ", pca_giuste,
+              "in percentuale ", 100 * pca_giuste / len(test_set_PCA), "%")
+        #RA
+        ra_giuste = ut.getRightNetResponse(NN_RA, test_set_RA)
+        print("La rete con input l'output interno della rete autoassociativa ha risposto correttamente a ", ra_giuste,
+              "in percentuale ", 100 * ra_giuste/len(test_set_RA), "%")
+       
+        print("\n" * 3)
         continue
 
