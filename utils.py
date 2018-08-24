@@ -1,6 +1,7 @@
 from sympy import sympify, lambdify, var
 
 import netFunctions as nf
+import matplotlib.pyplot as plt
 
 
 def getUserAmount(min, max):
@@ -16,6 +17,20 @@ def getUserAmount(min, max):
             print("Devi inserire un numero, riprova\n")
     return value
 
+def getUserAmountFloat(min, max, evenMin=True, evenMax=True):
+    while True:
+        amount = input("Inserisci un numero compreso tra {} e {}\n".format(min, max))
+        try:
+            value = float(amount)
+            if (min < value < max) or\
+                    (evenMax and value == max) or \
+                    (evenMin and value == min):
+                break
+            else:
+                print("Il numero dev'essere compreso tra {} e {}, riprova\n".format(min, max))
+        except ValueError:
+            print("Devi inserire un numero, riprova\n")
+    return value
 
 def getUserFunction(n_variables):
     print('\033[93m' + "ATTENZIONE: LA DEFINIZIONE DI UNA FUNZIONE NON VALIDA COMPROMETTERA' L'UTILIZZO DELLA RETE,"
@@ -85,3 +100,30 @@ def getErrorFunc():
     else:
         f = getUserFunction(2)
     return f
+
+
+def plotGraphErrors(error_t, error_v, title):
+    plt.plot(error_t, 'b*')
+    plt.plot(error_v, 'r*')
+    plt.ylabel("ERRORE")
+    plt.xlabel("EPOCHE")
+    plt.title(title)
+    plt.show()
+
+
+def getRightNetResponse(net, data_set):
+    right_responses = 0
+    for test in data_set:
+        out = net.predict(test['input'])
+        if test['label'][out.argmax()] == 1:
+            right_responses += 1
+    return right_responses
+
+def getNumbHiddenLayerRA():
+    print("Quanti strati interni vuoi nella rete associativa?\n"
+          "1) strato singolo\n"
+          "2) 3 strati interni\n")
+    choice = getUserAmount(1, 2)
+    if choice == 2:
+        choice = 3
+    return choice
