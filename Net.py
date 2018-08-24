@@ -347,9 +347,9 @@ while True:
         else:
             dimensions_RA[2] = len(training_set_PCA[0]['input'])
             print("inserisci il numero di nodi del primo strato nascosto")
-            dimensions_RA[1] = ut.getUserAmount(int(dimensions_RA[2] + 1), int(dimensions_RA[0]))
+            dimensions_RA[1] = ut.getUserAmount(int(dimensions_RA[2] + 1), int(dimensions_RA[0] - 1))
             print("inserisci il numero di nodi del terzo strato nascosto")
-            dimensions_RA[3] = ut.getUserAmount(dimensions_RA[2] + 1, dimensions_RA[0])
+            dimensions_RA[3] = ut.getUserAmount(int(dimensions_RA[2] + 1), int(dimensions_RA[0] - 1))
         #fisso le funzioni di attivazione per ogni livello
         functions_RA = {}
         for l in range(1, len(dimensions_RA)):
