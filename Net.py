@@ -26,6 +26,9 @@ class Net:
         self.B = {}
         dimensions = dimensions.astype(int)
 
+        if error_function != nf.cross_entropy and error_function != nf.sum_square:
+            var('t y')
+            self.error_function_ = lambdify((t, y), diff(error_function(t, y), y))
         for i in range(1, len(dimensions)):
 
             self.W[i] = np.random.randn(dimensions[i - 1], dimensions[i]) / np.sqrt(dimensions[i - 1])  # Pesi
@@ -66,7 +69,10 @@ class Net:
         error = 0
         for n in range(len(data_set)):
             out = self.predict(data_set[n]['input'])
-            error += self.error_function(out, data_set[n]['label'])
+            if hasattr(self, 'error_function_'): #controllo se la funzione d'errore è stata definita da input
+                error += sum(self.error_function(data_set[n]['label'], out))
+            else:
+                error += self.error_function(data_set[n]['label'], out)
         return error
 
     # learning online
@@ -120,7 +126,10 @@ class Net:
                     for l in range(self.n_layers - 1):
                         derivatives_tot['weights'][l] = np.add(derivatives_tot['weights'][l], derivatives['weights'][l])
                         derivatives_tot['bias'][l] = np.add(derivatives_tot['bias'][l], derivatives['bias'][l])
-                error_training[t] += self.error_function(out[self.n_layers], training_set[n]['label'])
+                if hasattr(self, 'error_function_'):  # controllo se la funzione d'errore è stata definita da input
+                    error_training[t] += sum(self.error_function(training_set[n]['label'], out[self.n_layers]))
+                else:
+                    error_training[t] += self.error_function(training_set[n]['label'], out[self.n_layers])
             print("errore a ", t , " = ", error_training[t])
             for l in range(self.n_layers - 1):
                 derivatives_tot['weights'][l] /= len(training_set)
@@ -166,9 +175,15 @@ class Net:
 
     def back_propagation(self, input, labels, outputs, node_act):
         # Calcolo delta
-        # Probabilmente il calcolo del delta va virtualizzato.
-        # Il seguente è valido se si utilizza la somma dei quadrati e la cross entropy
-        deltas = {self.n_layers: self.primes[self.n_layers - 1](node_act[self.n_layers]) * (
+        if hasattr(self, 'error_function_'):
+            deltas = {self.n_layers: self.primes[self.n_layers - 1](node_act[self.n_layers]) *
+                                     self.error_function_(labels, outputs[self.n_layers])}
+        elif self.error_function == nf.cross_entropy:
+            deltas = {self.n_layers: self.primes[self.n_layers - 1](node_act[self.n_layers]) *
+                                     (-labels / outputs[self.n_layers])}
+        else:
+            # Il seguente è valido se si utilizza la somma dei quadrati e la cross entropy
+            deltas = {self.n_layers: self.primes[self.n_layers - 1](node_act[self.n_layers]) * (
                 outputs[self.n_layers] - labels)}  # out - target
         for l in range(self.n_layers - 1, 1, -1):
             deltas[l] = np.dot(deltas[l + 1], self.W[l].transpose())
