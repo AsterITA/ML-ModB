@@ -126,26 +126,24 @@ class Net:
                 derivatives_tot['weights'][l] /= len(training_set)
                 derivatives_tot['bias'][l] /= len(training_set)
             if not any(lastDerivatives):
+                updateValuesW = cp.copy(self.W)
+                updateValuesB = cp.copy(self.B)
                 self.update_weights(derivatives_tot, eta)
+                for l in range(1, self.n_layers):
+                    updateValuesW[l] = abs(self.W[l] - updateValuesW[l])
+                    #trasposta
+                    updateValuesW[l] = updateValuesW[l].reshape([updateValuesW[l].shape[1], updateValuesW[l].shape[0]])
+                    updateValuesB[l] = abs(self.B[l] - updateValuesB[l])
             else:
                 # Applico la RPROP
-                if t == 1:
-                    for k in range(1, self.n_layers):
-                        updateValuesW[k] = np.empty([self.W[k].shape[1], self.W[k].shape[0]])
-                        updateValuesB[k] = np.empty(self.B[k].shape)
                 for l in range(1, self.n_layers):
                     for n in range(self.W[l].shape[1]):
                         for w in range(self.W[l].shape[0]):
-                            if t == 1:
-                                updateValuesW[l][n][w] = 0.0125  # DELTA0 per ogni connessione, di ogni neurone,
-                                                                # di ogni livello
                             # Aggiorno i pesi
                             self.W[l][w][n] += self.RPROP(derivatives_tot['weights'][l - 1][n],
                                                           lastDerivatives['weights'][l - 1][n],
                                                           updateValuesW[l][n], w, error_training[t],
                                                           error_training[t - 1])
-                        if t == 1:
-                            updateValuesB[l][n] = 0.0125  # DELTA0 per ogni bias, di ogni neurone, di ogni livello
                         # Aggiorno i Bias
                         self.B[l][n] += self.RPROP(derivatives_tot['bias'][l - 1], lastDerivatives['bias'][l - 1],
                                                    updateValuesB[l], n, error_training[t], error_training[t - 1])
