@@ -1,7 +1,7 @@
+import matplotlib.pyplot as plt
 from sympy import sympify, lambdify, var
 
 import netFunctions as nf
-import matplotlib.pyplot as plt
 
 
 def getUserAmount(min, max):
@@ -45,24 +45,26 @@ def getUserFunction(n_variables):
                 print("All'interno della funzione ci dev'essere la variabile x, riprova")
         func = lambdify(x, sympify(user_input))
     elif n_variables == 2:
-        var('x y')
+        var('t y')
         while True:
-            user_input = input("Definisci una funzione matematica con due variabili x e y\n")
-            if "x" in user_input:
+            user_input = input(
+                "Definisci una funzione di errore con due variabili t e y, dove y indica il valore predetto dalla rete"
+                "e t indica il valore che dovrebbe avere\n")
+            if "t" in user_input:
                 if "y" in user_input:
                     break
                 else:
-                    print("All'interno della funzione non c'è la variabile y, ricorda che devi inserire sia x che y, "
+                    print("All'interno della funzione non c'è la variabile y, ricorda che devi inserire sia t che y, "
                           "riprova")
             else:
                 print(
-                    "All'interno della funzione non c'è la variabile x, ricorda che devi inserire sia x che y, riprova")
-        func = lambdify((x, y), sympify(user_input))
+                    "All'interno della funzione non c'è la variabile t, ricorda che devi inserire sia t che y, riprova")
+        func = lambdify((t, y), sympify(user_input))
     print("Test funzione:")
     if n_variables == 1:
         print("La tua funzione con input 2 da come risultato: {}\n\n".format(func(2)))
     else:
-        print("La tua funzione con input x=2 e y=2 da come risultato: {}\n\n".format(func(2, 2)))
+        print("La tua funzione con input t=2 e y=3 da come risultato: {}\n\n".format(func(2, 3)))
     return func
 
 
