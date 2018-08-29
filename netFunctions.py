@@ -52,4 +52,4 @@ def sum_square(t, y):
 
 
 def cross_entropy(t, y):
-    return sklearn.metrics.log_loss(y, t)
+    return sklearn.metrics.log_loss(t, y)
