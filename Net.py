@@ -6,8 +6,8 @@ import netFunctions as nf
 
 
 class Net:
+    #Inizializzatore
     def __init__(self, dimensions, activations, error_function):
-
         self.n_layers = len(dimensions)
         self.activations = activations
         self.primes = {}
@@ -16,15 +16,16 @@ class Net:
         self.B = {}
         dimensions = dimensions.astype(int)
 
+        #Eventuale calcolo della derivata della funzione di errore
         if error_function != nf.cross_entropy and error_function != nf.sum_square:
             var('t y')
             self.error_function_ = lambdify((t, y), diff(error_function(t, y), y))
         for i in range(1, len(dimensions)):
-
-            self.W[i] = np.random.randn(dimensions[i - 1], dimensions[i]) / np.sqrt(dimensions[i - 1])  # Pesi
-            # The drawn weights are eventually divided by the square root of the current layers dimensions.
-            # This is called Xavier initialization and helps prevent neuron activations from being too large or too
-            self.B[i] = np.zeros(dimensions[i])  # Bias
+            #Pesi generati casualmente mediante il metodo di Xavier
+            self.W[i] = np.random.randn(dimensions[i - 1], dimensions[i]) / np.sqrt(dimensions[i - 1])
+            #Bias
+            self.B[i] = np.zeros(dimensions[i])
+            #Derivate delle rispettive funzioni di attivazione
             if self.activations[i] == nf.sigmoid:
                 self.primes[i] = nf.sigmoid_
             elif self.activations[i] == nf.ReLU:
@@ -38,34 +39,35 @@ class Net:
 
     # Forward propagation
     def feed_forward(self, x):
-        z = {}
-        # The first layer has no ‘real’ activations, so we consider the inputs x as the activations of the previous
-        # layer.
-        a = {1: x}
-
+        a = {}
+        #L'input è considerato il primo strato della rete
+        z = {1: x}
         for i in range(1, self.n_layers):
-            z[i + 1] = np.dot(a[i], self.W[i]) + self.B[i]
-            a[i + 1] = self.activations[i](z[i + 1])
-
+            #Attivazione
+            a[i + 1] = np.dot(z[i], self.W[i]) + self.B[i]
+            #Uscita di ogni neurone
+            z[i + 1] = self.activations[i](a[i + 1])
         # Output
-        return z, a
+        return a, z
 
+    #Estrapola l'ultimo output
     def predict(self, x):
-        _, a = self.feed_forward(x)
-        return a[self.n_layers]
+        _, z = self.feed_forward(x)
+        return z[self.n_layers]
 
+    #Calcolo dell'errore sul data set
     def compute_error(self, data_set):
-        # Calcolo dell'errore sul data set
         error = 0
         for n in range(len(data_set)):
             out = self.predict(data_set[n]['input'])
-            if hasattr(self, 'error_function_'): #controllo se la funzione d'errore è stata definita da input
+            #Controlla se la funzione d'errore è stata definita da input
+            if hasattr(self, 'error_function_'):
                 error += sum(self.error_function(data_set[n]['label'], out))
             else:
                 error += self.error_function(data_set[n]['label'], out)
         return error
 
-    # learning online
+    #Learning online
     def train_net_online(self, training_set, validation_set, max_epoch, eta, alpha):
         best_error_validation = float("inf")  # float("inf") è il valore float dell'inifinito, quindi garantisce
         error_training = np.zeros(max_epoch)    # che è il numero più grande rappresentabile dal sistema
