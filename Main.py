@@ -147,7 +147,8 @@ while True:
 
         NN_R = Net.Net(dimensions_RA, functions_RA, nf.sum_square)
         print("Addestramento della rete autoassociativa iniziato")
-        err_train_R, err_valid_R = NN_R.train_net_batch(training_set_R, validation_set_R, max_epoche_RA, eta_RA, alpha_RA)
+        err_train_R, err_valid_R = NN_R.train_net_batch(training_set_R, validation_set_R, max_epoche_RA, eta_RA,
+                                                        alpha_RA)
         ut.plotGraphErrors(err_train_R, err_valid_R, "Addestramento rete autoassociativa")
         print("Addestramento della rete autoassociativa completato")
         print("conversione dataset con la rete autoassociativa")
@@ -190,4 +191,3 @@ while True:
 
         print("\n" * 3)
         continue
-

@@ -20,6 +20,7 @@ def getUserAmount(min, max, Float=False):
             print("Devi inserire un numero, riprova\n")
     return value
 
+
 def getUserFunction(n_variables):
     print('\033[93m' + "ATTENZIONE: LA DEFINIZIONE DI UNA FUNZIONE NON VALIDA COMPROMETTERA' L'UTILIZZO DELLA RETE,"
                        " PERTANTO NON SI GARANTISCE IL CORRETTO FUNZIONAMENTO DELLA STESSA" + '\033[0m')
@@ -108,6 +109,7 @@ def getRightNetResponse(net, data_set):
         if test['label'][out.argmax()] == 1:
             right_responses += 1
     return right_responses
+
 
 def getNumbHiddenLayerRA():
     print("Quanti strati interni vuoi nella rete associativa?\n"
