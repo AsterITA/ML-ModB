@@ -1,19 +1,23 @@
 import sys
-from tensorflow.examples.tutorials.mnist import input_data
-import Net
+
 import numpy as np
-from sympy import var
+from tensorflow.examples.tutorials.mnist import input_data
+
+import Net
 import netFunctions as nf
 import utils as ut
 
 DIM_TRAINING_SET = 200
 DIM_VALIDATION_SET = 100
 DIM_TEST_SET = 100
+ETA_MIN = 0.0001
+ETA_MAX = 0, 9999
 
 mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
 training_set = []
 validation_set = []
 test_set = []
+
 #   Mi prendo le prime 200 immagini per il training e le prime 100 per il validation e per il test
 for i in range(DIM_TRAINING_SET):
     elem = {'input': mnist.train.images[i], 'label': mnist.train.labels[i]}
@@ -24,7 +28,7 @@ for i in range(DIM_TRAINING_SET):
     if i < DIM_TEST_SET:
         elem = {'input': mnist.test.images[i], 'label': mnist.test.labels[i]}
         test_set.append(elem)
-var('x')
+
 print("Scegli cosa vuoi fare dalla seguente lista:")
 while True:
     print("0) Chiudi il programma\n"
@@ -36,7 +40,7 @@ while True:
     elif choice == 1:
         print("Quanti strati interni vuoi all'interno della tua rete?")
         n_layers = ut.getUserAmount(1, 10)
-        dimensions = np.zeros(n_layers + 2)
+        dimensions = np.empty(n_layers + 2)
         dimensions[0] = len(training_set[0]['input'])
         dimensions[n_layers + 1] = 10
         functions = {}
@@ -47,11 +51,11 @@ while True:
         functions[n_layers + 1] = ut.getActivation(n_layers + 1)
         NN = Net.Net(dimensions, functions, ut.getErrorFunc())
         print("inserisci il valore di eta : ")
-        eta = ut.getUserAmountFloat(0, 1, False, False)
+        eta = ut.getUserAmount(ETA_MIN, ETA_MAX, True)
         print("inserisci il numero massimo di epoche : ")
         max_epoche = ut.getUserAmount(10, 3000)
         print("inserisci il valore di alpha per la Generalization Loss : ")
-        alpha = ut.getUserAmountFloat(1, 100)
+        alpha = ut.getUserAmount(1, 100)
         print("Vuoi utilizzare il learning batch o online?\n"
               "1) Batch\n"
               "2) Online\n")
@@ -68,7 +72,7 @@ while True:
     elif choice == 2:
         # TEST PCA
         print("Inserisci la soglia del quantitativo di informazione da preservare dalla PCA")
-        soglia_pca = ut.getUserAmountFloat(50, 100) / 100
+        soglia_pca = ut.getUserAmount(50, 100, True) / 100
         new_dataset, matrix_w = Net.PCA(mnist.train.images[:DIM_TRAINING_SET], soglia_pca)
         training_set_PCA = []
         validation_set_PCA = []
@@ -90,11 +94,11 @@ while True:
         dimensions[2] = 10
         functions = {1: ut.getActivation(1), 2: ut.getActivation(2)}
         print("inserisci il valore di eta : ")
-        eta = ut.getUserAmountFloat(0, 1, False, False)
+        eta = ut.getUserAmount(ETA_MIN, ETA_MAX, True)
         print("inserisci il numero massimo di epoche : ")
         max_epoche = ut.getUserAmount(10, 3000)
         print("inserisci il valore di alpha per la Generalization Loss : ")
-        alpha = ut.getUserAmountFloat(1, 100)
+        alpha = ut.getUserAmount(1, 100)
         error_function = ut.getErrorFunc()
         NN_PCA = Net.Net(dimensions, functions, error_function)
         err_train_PCA, err_valid_PCA = NN_PCA.train_net_batch(training_set_PCA, validation_set_PCA, max_epoche, eta,
@@ -135,11 +139,11 @@ while True:
             functions_RA[l] = ut.getActivation(l)
         # inserimento parametri di learning
         print("inserisci il valore di eta : ")
-        eta_RA = ut.getUserAmountFloat(0, 1, False, False)
+        eta_RA = ut.getUserAmount(ETA_MIN, ETA_MAX, True)
         print("inserisci il numero massimo di epoche : ")
         max_epoche_RA = ut.getUserAmount(10, 3000)
         print("inserisci il valore di alpha per la Generalization Loss : ")
-        alpha_RA = ut.getUserAmountFloat(1, 100)
+        alpha_RA = ut.getUserAmount(1, 100)
 
         NN_R = Net.Net(dimensions_RA, functions_RA, nf.sum_square)
         print("Addestramento della rete autoassociativa iniziato")

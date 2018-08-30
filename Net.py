@@ -1,7 +1,9 @@
 import copy as cp
+
 import numpy as np
 from sympy import var, diff
 from sympy.utilities.lambdify import lambdify
+
 import netFunctions as nf
 
 
@@ -18,7 +20,7 @@ class Net:
 
         #Eventuale calcolo della derivata della funzione di errore
         if error_function != nf.cross_entropy and error_function != nf.sum_square:
-            var('t y')
+            var('t y')  # Necessario per le variabili t e y di lambdify
             self.error_function_ = lambdify((t, y), diff(error_function(t, y), y))
         for i in range(1, len(dimensions)):
             #Pesi generati casualmente mediante il metodo di Xavier
@@ -35,6 +37,7 @@ class Net:
             elif self.activations[i] == nf.identity:
                 self.primes[i] = nf.identity_
             else:
+                var('x')  # Necessario per la variabile x di lambdify
                 self.primes[i] = lambdify(x, diff(self.activations[i](x), x))
 
     # Forward propagation
@@ -169,14 +172,14 @@ class Net:
 
     def back_propagation(self, input, labels, outputs, node_act):
         # Calcolo delta
-        if hasattr(self, 'error_function_'):
+        if hasattr(self, 'error_function_'):  # Delta nel caso di funzione di errore da input
             deltas = {self.n_layers: self.primes[self.n_layers - 1](node_act[self.n_layers]) *
                                      self.error_function_(labels, outputs[self.n_layers])}
-        elif self.error_function == nf.cross_entropy:
+        elif self.error_function == nf.cross_entropy:  # Delta nel caso della cross entropy
             deltas = {self.n_layers: self.primes[self.n_layers - 1](node_act[self.n_layers]) *
                                      (-labels / outputs[self.n_layers])}
         else:
-            # Il seguente è valido se si utilizza la somma dei quadrati e la cross entropy
+            # Il seguente è valido se si utilizza la somma dei quadrati
             deltas = {self.n_layers: self.primes[self.n_layers - 1](node_act[self.n_layers]) * (
                 outputs[self.n_layers] - labels)}  # out - target
         for l in range(self.n_layers - 1, 1, -1):

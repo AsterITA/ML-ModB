@@ -41,10 +41,6 @@ def identity_(x):
 # FUNZIONI DI ERRORE
 
 def sum_square(t, y):
-    # err = 0
-    # for i in range(y.size):
-    #     err += (y[i] - t[i]) ** 2
-    #     err /= 2
     err = (y - t) ** 2
     err = sum(err)
     err /= 2
