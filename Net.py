@@ -1,12 +1,14 @@
 import copy as cp
+
 import numpy as np
 from sympy import var, diff
 from sympy.utilities.lambdify import lambdify
+
 import netFunctions as nf
 
 
 class Net:
-    #Inizializzatore
+    # Inizializzatore
     def __init__(self, dimensions, activations, error_function):
         self.n_layers = len(dimensions)
         self.activations = activations
@@ -16,16 +18,16 @@ class Net:
         self.B = {}
         dimensions = dimensions.astype(int)
 
-        #Eventuale calcolo della derivata della funzione di errore
+        # Eventuale calcolo della derivata della funzione di errore
         if error_function != nf.cross_entropy and error_function != nf.sum_square:
-            var('t y')
+            var('t y')  # Necessario per le variabili t e y di lambdify
             self.error_function_ = lambdify((t, y), diff(error_function(t, y), y))
         for i in range(1, len(dimensions)):
-            #Pesi generati casualmente mediante il metodo di Xavier
+            # Pesi generati casualmente mediante il metodo di Xavier
             self.W[i] = np.random.randn(dimensions[i - 1], dimensions[i]) / np.sqrt(dimensions[i - 1])
-            #Bias
+            # Bias
             self.B[i] = np.zeros(dimensions[i])
-            #Derivate delle rispettive funzioni di attivazione
+            # Derivate delle rispettive funzioni di attivazione
             if self.activations[i] == nf.sigmoid:
                 self.primes[i] = nf.sigmoid_
             elif self.activations[i] == nf.ReLU:
@@ -35,42 +37,43 @@ class Net:
             elif self.activations[i] == nf.identity:
                 self.primes[i] = nf.identity_
             else:
+                var('x')  # Necessario per la variabile x di lambdify
                 self.primes[i] = lambdify(x, diff(self.activations[i](x), x))
 
     # Forward propagation
     def feed_forward(self, x):
         a = {}
-        #L'input è considerato il primo strato della rete
+        # L'input è considerato il primo strato della rete
         z = {1: x}
         for i in range(1, self.n_layers):
-            #Attivazione
+            # Attivazione
             a[i + 1] = np.dot(z[i], self.W[i]) + self.B[i]
-            #Uscita di ogni neurone
+            # Uscita di ogni neurone
             z[i + 1] = self.activations[i](a[i + 1])
         # Output
         return a, z
 
-    #Estrapola l'ultimo output
+    # Estrapola l'ultimo output
     def predict(self, x):
         _, z = self.feed_forward(x)
         return z[self.n_layers]
 
-    #Calcolo dell'errore sul data set
+    # Calcolo dell'errore sul data set
     def compute_error(self, data_set):
         error = 0
         for n in range(len(data_set)):
             out = self.predict(data_set[n]['input'])
-            #Controlla se la funzione d'errore è stata definita da input
+            # Controlla se la funzione d'errore è stata definita da input
             if hasattr(self, 'error_function_'):
                 error += sum(self.error_function(data_set[n]['label'], out))
             else:
                 error += self.error_function(data_set[n]['label'], out)
         return error
 
-    #Learning online
+    # Learning online
     def train_net_online(self, training_set, validation_set, max_epoch, eta, alpha):
         best_error_validation = float("inf")  # float("inf") è il valore float dell'inifinito, quindi garantisce
-        error_training = np.zeros(max_epoch)    # che è il numero più grande rappresentabile dal sistema
+        error_training = np.zeros(max_epoch)  # che è il numero più grande rappresentabile dal sistema
         error_validation = np.zeros(max_epoch)
         best_W = best_B = 0
         for t in range(max_epoch):
@@ -99,9 +102,10 @@ class Net:
             self.B = best_B
         return np.resize(error_training, t), np.resize(error_validation, t)
 
-    def train_net_batch(self, training_set, validation_set, max_epoch, eta, alpha, eta_p=1.2, eta_m=0.5, max_step=50, min_step=0):
+    def train_net_batch(self, training_set, validation_set, max_epoch, eta, alpha, eta_p=1.2, eta_m=0.5, max_step=50,
+                        min_step=0):
         best_error_validation = float("inf")  # float("inf") è il valore float dell'inifinito, quindi garantisce
-        error_training = np.zeros(max_epoch)    # che è il numero più grande rappresentabile dal sistema
+        error_training = np.zeros(max_epoch)  # che è il numero più grande rappresentabile dal sistema
         error_validation = np.zeros(max_epoch)
         best_W = best_B = 0
         lastDerivatives = {}
@@ -122,7 +126,7 @@ class Net:
                     error_training[t] += sum(self.error_function(training_set[n]['label'], out[self.n_layers]))
                 else:
                     error_training[t] += self.error_function(training_set[n]['label'], out[self.n_layers])
-            print("errore a ", t , " = ", error_training[t])
+            print("errore a ", t, " = ", error_training[t])
             for l in range(self.n_layers - 1):
                 derivatives_tot['weights'][l] /= len(training_set)
                 derivatives_tot['bias'][l] /= len(training_set)
@@ -132,7 +136,7 @@ class Net:
                 self.update_weights(derivatives_tot, eta)
                 for l in range(1, self.n_layers):
                     updateValuesW[l] = abs(self.W[l] - updateValuesW[l])
-                    #trasposta
+                    # trasposta
                     updateValuesW[l] = updateValuesW[l].reshape([updateValuesW[l].shape[1], updateValuesW[l].shape[0]])
                     updateValuesB[l] = abs(self.B[l] - updateValuesB[l])
             else:
@@ -169,16 +173,16 @@ class Net:
 
     def back_propagation(self, input, labels, outputs, node_act):
         # Calcolo delta
-        if hasattr(self, 'error_function_'):
+        if hasattr(self, 'error_function_'):  # Delta nel caso di funzione di errore da input
             deltas = {self.n_layers: self.primes[self.n_layers - 1](node_act[self.n_layers]) *
                                      self.error_function_(labels, outputs[self.n_layers])}
-        elif self.error_function == nf.cross_entropy:
+        elif self.error_function == nf.cross_entropy:  # Delta nel caso della cross entropy
             deltas = {self.n_layers: self.primes[self.n_layers - 1](node_act[self.n_layers]) *
                                      (-labels / outputs[self.n_layers])}
         else:
-            # Il seguente è valido se si utilizza la somma dei quadrati e la cross entropy
+            # Il seguente è valido se si utilizza la somma dei quadrati
             deltas = {self.n_layers: self.primes[self.n_layers - 1](node_act[self.n_layers]) * (
-                outputs[self.n_layers] - labels)}  # out - target
+                    outputs[self.n_layers] - labels)}  # out - target
         for l in range(self.n_layers - 1, 1, -1):
             deltas[l] = np.dot(deltas[l + 1], self.W[l].transpose())
             deltas[l] = self.primes[l - 1](node_act[l]) * deltas[l]
@@ -193,7 +197,8 @@ class Net:
         derivatives = {'weights': derivate_W, 'bias': derivate_B}
         return derivatives
 
-    def RPROP(self, derivatives, lastDerivatives, lastDelta, i, actualError, lastError, eta_p, eta_m, max_step, min_step):
+    def RPROP(self, derivatives, lastDerivatives, lastDelta, i, actualError, lastError, eta_p, eta_m, max_step,
+              min_step):
         change = np.sign(derivatives[i] * lastDerivatives[i])
         if change > 0:
             lastDelta[i] = delta = min(lastDelta[i] * eta_p, max_step)
@@ -208,7 +213,6 @@ class Net:
         else:
             deltaW = -np.sign(derivatives[i]) * lastDelta[i]
         return deltaW
-
 
     def update_weights(self, derivatives, eta):
         # Aggiornamento dei pesi Metodo discesa del gradiente
@@ -225,7 +229,7 @@ def PCA(data_set, soglia):
     eig_vals, eig_vecs = np.linalg.eig(cov_mat)
     # Calcolo la somma totale degli autovalori
     eig_vals_tot = sum(eig_vals)
-    #Creazione liste di tuple del tipo (autovalore, autovettore)
+    # Creazione liste di tuple del tipo (autovalore, autovettore)
     eig_pairs = [(np.abs(eig_vals[i]), eig_vecs[:, i]) for i in range(len(eig_vals))]
     # Ordinamento decrescente della lista delle tuple in base agli autovalori
     eig_pairs.sort(reverse=True, key=(lambda x: x[0]))

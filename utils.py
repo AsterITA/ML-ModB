@@ -5,11 +5,14 @@ from sympy import sympify, lambdify, var
 import netFunctions as nf
 
 
-def getUserAmount(min, max):
+def getUserAmount(min, max, Float=False):
     while True:
         amount = input("Inserisci un numero compreso tra {} e {}\n".format(min, max))
         try:
-            value = int(amount)
+            if Float:
+                value = float(amount)
+            else:
+                value = int(amount)
             if min <= value <= max:
                 break
             else:
@@ -18,20 +21,6 @@ def getUserAmount(min, max):
             print("Devi inserire un numero, riprova\n")
     return value
 
-def getUserAmountFloat(min, max, evenMin=True, evenMax=True):
-    while True:
-        amount = input("Inserisci un numero compreso tra {} e {}\n".format(min, max))
-        try:
-            value = float(amount)
-            if (min < value < max) or\
-                    (evenMax and value == max) or \
-                    (evenMin and value == min):
-                break
-            else:
-                print("Il numero dev'essere compreso tra {} e {}, riprova\n".format(min, max))
-        except ValueError:
-            print("Devi inserire un numero, riprova\n")
-    return value
 
 def getUserFunction(n_variables):
     print('\033[93m' + "ATTENZIONE: LA DEFINIZIONE DI UNA FUNZIONE NON VALIDA COMPROMETTERA' L'UTILIZZO DELLA RETE,"
@@ -130,6 +119,7 @@ def getRightNetResponse(net, data_set):
         if test['label'][out.argmax()] == 1:
             right_responses += 1
     return right_responses
+
 
 def getNumbHiddenLayerRA():
     print("Quanti strati interni vuoi nella rete associativa?\n"

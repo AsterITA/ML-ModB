@@ -7,6 +7,8 @@ import netFunctions as nf
 import utils as ut
 import matplotlib.pyplot as plt
 
+ETA_MIN = 0.0001
+ETA_MAX = 0.9999
 
 argomenti = sys.argv
 if len(argomenti) > 2:
@@ -33,7 +35,7 @@ for i in range(DIM_TRAINING_SET):
     if i < DIM_TEST_SET:
         elem = {'input': mnist.test.images[i], 'label': mnist.test.labels[i]}
         test_set.append(elem)
-var('x')
+
 print("Scegli cosa vuoi fare dalla seguente lista:")
 while True:
     print("0) Chiudi il programma\n"
@@ -45,7 +47,7 @@ while True:
     elif choice == 1:
         print("Quanti strati interni vuoi all'interno della tua rete?")
         n_layers = ut.getUserAmount(1, 10)
-        dimensions = np.zeros(n_layers + 2)
+        dimensions = np.empty(n_layers + 2)
         dimensions[0] = len(training_set[0]['input'])
         dimensions[n_layers + 1] = 10
         functions = {}
@@ -56,11 +58,11 @@ while True:
         functions[n_layers + 1] = ut.getActivation(n_layers + 1)
         NN = Net.Net(dimensions, functions, ut.getErrorFunc())
         print("inserisci il valore di eta : ")
-        eta = ut.getUserAmountFloat(0, 1, False, False)
+        eta = ut.getUserAmount(ETA_MIN, ETA_MAX, True)
         print("inserisci il numero massimo di epoche : ")
         max_epoche = ut.getUserAmount(10, 3000)
         print("inserisci il valore di alpha per la Generalization Loss : ")
-        alpha = ut.getUserAmountFloat(1, 100)
+        alpha = ut.getUserAmount(1, 100)
         print("Vuoi utilizzare il learning batch o online?\n"
               "1) Batch\n"
               "2) Online\n")
@@ -81,7 +83,7 @@ while True:
     elif choice == 2:
         # TEST PCA
         print("Inserisci la soglia del quantitativo di informazione da preservare dalla PCA")
-        soglia_pca = ut.getUserAmountFloat(50, 100) / 100
+        soglia_pca = ut.getUserAmount(50, 100, True) / 100
         new_dataset, matrix_w = Net.PCA(mnist.train.images[:DIM_TRAINING_SET], soglia_pca)
         plt.imshow(np.ndarray.reshape(mnist.train.images[0], (28, 28)), cmap=plt.cm.binary)
         if len(argomenti) > 1:
@@ -113,11 +115,11 @@ while True:
         dimensions[2] = 10
         functions = {1: ut.getActivation(1), 2: ut.getActivation(2)}
         print("inserisci il valore di eta : ")
-        eta = ut.getUserAmountFloat(0, 1, False, False)
+        eta = ut.getUserAmount(ETA_MIN, ETA_MAX, True)
         print("inserisci il numero massimo di epoche : ")
         max_epoche = ut.getUserAmount(10, 3000)
         print("inserisci il valore di alpha per la Generalization Loss : ")
-        alpha = ut.getUserAmountFloat(1, 100)
+        alpha = ut.getUserAmount(1, 100)
         error_function = ut.getErrorFunc()
         print("La rete per il test della PCA e della rete autoassociativa sarà composta da ", len(dimensions),
               "\ncon relativi numero di nodi per ogni livello ",
@@ -164,11 +166,11 @@ while True:
             functions_RA[l] = ut.getActivation(l)
         # inserimento parametri di learning
         print("inserisci il valore di eta : ")
-        eta_RA = ut.getUserAmountFloat(0, 1, False, False)
+        eta_RA = ut.getUserAmount(ETA_MIN, ETA_MAX, True)
         print("inserisci il numero massimo di epoche : ")
         max_epoche_RA = ut.getUserAmount(10, 3000)
         print("inserisci il valore di alpha per la Generalization Loss : ")
-        alpha_RA = ut.getUserAmountFloat(1, 100)
+        alpha_RA = ut.getUserAmount(1, 100)
         print("La rete autoassociativa sarà composta da ",len(dimensions_RA),
               "\ncon relativi numero di nodi per ogni livello ",
               dimensions_RA, "\ne relative funzioni di attivazione ", functions_RA)
@@ -227,6 +229,6 @@ while True:
         ra_giuste = ut.getRightNetResponse(NN_RA, test_set_RA)
         print("La rete con input l'output interno della rete autoassociativa ha risposto correttamente a ", ra_giuste,
               "in percentuale ", 100 * ra_giuste / len(test_set_RA), "%")
+
         print("\n" * 3)
         continue
-
