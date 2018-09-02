@@ -5,12 +5,21 @@ import numpy as np
 from sympy import var
 import netFunctions as nf
 import utils as ut
+import matplotlib.pyplot as plt
 
-DIM_TRAINING_SET = 200
-DIM_VALIDATION_SET = 100
-DIM_TEST_SET = 100
 
-mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
+argomenti = sys.argv
+if len(argomenti) > 2:
+    path = argomenti[2]
+else:
+    path = ""
+mnist = input_data.read_data_sets(path + "MNIST_data/", one_hot=True)
+print("Inserisci la dimensione del training set")
+DIM_TRAINING_SET = ut.getUserAmount(200, len(mnist.train.images))
+print("Inserisci la dimensione del validation set")
+DIM_VALIDATION_SET = ut.getUserAmount(100, len(mnist.validation.images))
+print("Inserisci la dimensione del test set")
+DIM_TEST_SET = ut.getUserAmount(100, len(mnist.test.images))
 training_set = []
 validation_set = []
 test_set = []
@@ -59,7 +68,11 @@ while True:
             error_train, error_valid = NN.train_net_online(training_set, validation_set, max_epoche, eta, alpha)
         else:
             error_train, error_valid = NN.train_net_batch(training_set, validation_set, max_epoche, eta, alpha)
-        ut.plotGraphErrors(error_train, error_valid, "Addestramento della rete senza riduzione delle dimensioni")
+        if len(argomenti) == 1:
+            ut.plotGraphErrors(error_train, error_valid, "Addestramento della rete senza riduzione delle dimensioni")
+        else:
+            ut.plotGraphErrors(error_train, error_valid, "Addestramento della rete senza riduzione delle dimensioni",
+                               argomenti[1])
         risp_giuste = ut.getRightNetResponse(NN, test_set)
         print("La rete con input l'output interno della rete autoassociativa ha risposto correttamente a ", risp_giuste,
               "in percentuale ", 100 * risp_giuste / len(test_set), "%")
@@ -70,6 +83,16 @@ while True:
         print("Inserisci la soglia del quantitativo di informazione da preservare dalla PCA")
         soglia_pca = ut.getUserAmountFloat(50, 100) / 100
         new_dataset, matrix_w = Net.PCA(mnist.train.images[:DIM_TRAINING_SET], soglia_pca)
+        plt.imshow(np.ndarray.reshape(mnist.train.images[0], (28, 28)), cmap=plt.cm.binary)
+        if len(argomenti) > 1:
+            plt.savefig(argomenti[1] + "Immagine originale.png")
+        else:
+            plt.show()
+        plt.imshow(np.ndarray.reshape(np.dot(new_dataset[0], matrix_w.transpose()), (28, 28)), cmap=plt.cm.binary)
+        if len(argomenti) > 1:
+            plt.savefig(argomenti[1] + "Immagine ridotta con la PCA.png")
+        else:
+            plt.show()
         training_set_PCA = []
         validation_set_PCA = []
         test_set_PCA = []
@@ -96,10 +119,16 @@ while True:
         print("inserisci il valore di alpha per la Generalization Loss : ")
         alpha = ut.getUserAmountFloat(1, 100)
         error_function = ut.getErrorFunc()
+        print("La rete per il test della PCA e della rete autoassociativa sarà composta da ", len(dimensions),
+              "\ncon relativi numero di nodi per ogni livello ",
+              dimensions, "\ne relative funzioni di attivazione ", functions)
         NN_PCA = Net.Net(dimensions, functions, error_function)
         err_train_PCA, err_valid_PCA = NN_PCA.train_net_batch(training_set_PCA, validation_set_PCA, max_epoche, eta,
                                                               alpha)
-        ut.plotGraphErrors(err_train_PCA, err_valid_PCA, "Addestramento rete con input l'out dell PCA")
+        if len(argomenti) == 1:
+            ut.plotGraphErrors(err_train_PCA, err_valid_PCA, "Addestramento rete con input l'out dell PCA")
+        else:
+            ut.plotGraphErrors(err_train_PCA, err_valid_PCA, "Addestramento rete con input l'out dell PCA", argomenti[1])
         print("Rete con input della PCA addestrata\n\n")
         print("Creazione della rete autoassociativa")
         # Test Rete Autoassociativa
@@ -140,13 +169,24 @@ while True:
         max_epoche_RA = ut.getUserAmount(10, 3000)
         print("inserisci il valore di alpha per la Generalization Loss : ")
         alpha_RA = ut.getUserAmountFloat(1, 100)
-
+        print("La rete autoassociativa sarà composta da ",len(dimensions_RA),
+              "\ncon relativi numero di nodi per ogni livello ",
+              dimensions_RA, "\ne relative funzioni di attivazione ", functions_RA)
         NN_R = Net.Net(dimensions_RA, functions_RA, nf.sum_square)
         print("Addestramento della rete autoassociativa iniziato")
         err_train_R, err_valid_R = NN_R.train_net_batch(training_set_R, validation_set_R, max_epoche_RA, eta_RA, alpha_RA)
-        ut.plotGraphErrors(err_train_R, err_valid_R, "Addestramento rete autoassociativa")
+        if len(argomenti) == 1:
+            ut.plotGraphErrors(err_train_R, err_valid_R, "Addestramento rete autoassociativa")
+        else:
+            ut.plotGraphErrors(err_train_R, err_valid_R, "Addestramento rete autoassociativa", argomenti[1])
         print("Addestramento della rete autoassociativa completato")
         print("conversione dataset con la rete autoassociativa")
+        #stampa numeri di prova
+        plt.imshow(np.ndarray.reshape(NN_R.predict(training_set_R[0]['input']), (28, 28)), cmap=plt.cm.binary)
+        if len(argomenti) > 1:
+            plt.savefig(argomenti[1] + "Immagine ridotta con rete autoassociativa.png")
+        else:
+            plt.show()
         # creazione data set con dimensione ridotta
         training_set_RA = []
         validation_set_RA = []
@@ -173,7 +213,11 @@ while True:
         print("Creazione  e addestramento della rete con input l'out interno della rete autoassociativa")
         NN_RA = Net.Net(dimensions, functions, error_function)
         err_train_RA, err_valid_RA = NN_RA.train_net_batch(training_set_RA, validation_set_RA, max_epoche, eta, alpha)
-        ut.plotGraphErrors(err_train_RA, err_valid_RA, "Addestramento rete con out interno della rete autoassociativa")
+        if len(argomenti) == 1:
+            ut.plotGraphErrors(err_train_RA, err_valid_RA, "Addestramento rete con out interno della rete autoassociativa")
+        else:
+            ut.plotGraphErrors(err_train_RA, err_valid_RA,
+                               "Addestramento rete con out interno della rete autoassociativa", argomenti[1])
         print("Elaborazione delle due reti cui rispettivi test set e calcolo delle risposte giuste")
         # PCA
         pca_giuste = ut.getRightNetResponse(NN_PCA, test_set_PCA)
@@ -183,7 +227,6 @@ while True:
         ra_giuste = ut.getRightNetResponse(NN_RA, test_set_RA)
         print("La rete con input l'output interno della rete autoassociativa ha risposto correttamente a ", ra_giuste,
               "in percentuale ", 100 * ra_giuste / len(test_set_RA), "%")
-
         print("\n" * 3)
         continue
 
