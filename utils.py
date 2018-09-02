@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from sympy import sympify, lambdify, var
 
 import netFunctions as nf
@@ -104,13 +105,22 @@ def getErrorFunc():
     return f
 
 
-def plotGraphErrors(error_t, error_v, title):
+def plotGraphErrors(error_t, error_v, title, path=False):
+    plt.tight_layout()
+    plt.figure(figsize=[10, 10])
     plt.plot(error_t, 'b*')
     plt.plot(error_v, 'r*')
+    blue_patch = mpatches.Patch(color='blue', label='ERRORE SU TRAINING SET')
+    red_patch = mpatches.Patch(color='red', label='ERRORE SU VALIDATION SET')
+    plt.legend(handles=[blue_patch, red_patch])
     plt.ylabel("ERRORE")
     plt.xlabel("EPOCHE")
     plt.title(title)
-    plt.show()
+    if path == False:
+        plt.show()
+    else:
+        plt.savefig(path + title + ".png", format="png")
+    plt.close()
 
 
 def getRightNetResponse(net, data_set):
