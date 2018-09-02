@@ -2,7 +2,6 @@ import sys
 from tensorflow.examples.tutorials.mnist import input_data
 import Net
 import numpy as np
-from sympy import var
 import netFunctions as nf
 import utils as ut
 import matplotlib.pyplot as plt
@@ -25,7 +24,6 @@ DIM_TEST_SET = ut.getUserAmount(100, len(mnist.test.images))
 training_set = []
 validation_set = []
 test_set = []
-#   Mi prendo le prime 200 immagini per il training e le prime 100 per il validation e per il test
 for i in range(DIM_TRAINING_SET):
     elem = {'input': mnist.train.images[i], 'label': mnist.train.labels[i]}
     training_set.append(elem)
